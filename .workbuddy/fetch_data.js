@@ -23,13 +23,15 @@ const SRC = path.join(__dirname, 'source');
 
 async function run(label, fn, file, redsN, extraN) {
   try {
-    const { rows } = await fn();
+    const { rows, url, from, note } = await fn();
     lib.validate(rows, redsN, extraN, label);
     fs.writeFileSync(path.join(SRC, file), lib.toText(rows), 'utf8');
     const nw = rows[0], od = rows[rows.length - 1];
     console.log('[OK]   ' + label + ' ' + rows.length + ' 行 → ' + file +
-      ' | 最新 ' + nw.code + ' ' + nw.date + ' | 最旧 ' + od.code + ' ' + od.date);
-    return { name: label, ok: true, n: rows.length, newest: nw.code, newestDate: nw.date };
+      ' | 最新 ' + nw.code + ' ' + nw.date + ' | 最旧 ' + od.code + ' ' + od.date +
+      ' | 来源 ' + (from || '?') + (url ? '(' + url + ')' : ''));
+    if (note) console.log('       ↳ ' + note);
+    return { name: label, ok: true, n: rows.length, newest: nw.code, newestDate: nw.date, from: from || null };
   } catch (e) {
     console.log('[FAIL] ' + label + ' 保留 ' + file + ' 原样不动 -> ' + e.message);
     return { name: label, ok: false, err: e.message };

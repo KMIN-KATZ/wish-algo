@@ -346,12 +346,24 @@ console.log('    E5 奖池   : ' + R3.e5note);
     const ssqWant = '2026107|2026-09-15|01,05,09,17,24,33|04|858528126|9|6900239';
     if (ssqLine !== ssqWant) FAIL.push('parseSsq 解析错\n      期望 ' + ssqWant + '\n      实得 ' + ssqLine);
 
+    // 双色球备用源：福彩对境外 IP 返回 403（GitHub Actions 实测），所以必须有 500 这条源。
+    // 同一期两条源必须**逐字段一致**，否则回退会悄悄改数据 —— 本机实测 200 期零差异。
+    const ssq500Html = '<table>\n<!-- <td>干扰</td><td>干扰</td> -->\n' +
+      '<tr class="t_tr1"><td>26107</td><td>01</td><td>05</td><td>09</td><td>17</td><td>24</td><td>33</td>' +
+      '<td>04</td><td></td><td>858,528,126</td><td>9</td><td>6,900,239</td>' +
+      '<td>249</td><td>85,854</td><td>328,194,638</td><td>2026-09-15</td></tr></table>';
+    let s5 = '';
+    try { s5 = lib.parseSsq500(ssq500Html)[0].line; } catch (e) { FAIL.push('parseSsq500 抛异常: ' + e.message); }
+    if (s5 !== ssqWant) FAIL.push('parseSsq500 解析错（列索引漂移？期号没补成 7 位？）\n      期望 ' + ssqWant + '\n      实得 ' + s5);
+    // 双源一致性本身也要能被自动发现：拿真实的两份数据比对
+    if (lib.fetchSsq500 === undefined) FAIL.push('lib/parse.js 没导出 fetchSsq500（双色球没有备用源）');
+
     // 体检要能拦住残缺数据
     let caught = false;
     try { lib.validate([{ line: 'x|y|01,02|03|4|5|6' }], 6, 1, 'test'); } catch (e) { caught = true; }
     if (!caught) FAIL.push('validate 没拦住残缺行（红球只有 2 个却放过了）');
-    console.log('[21] 共用解析库: parseDlt/parseSsq 两个已知坑 + validate 拦截 → ' +
-      ((dltLine === dltWant && ssqLine === ssqWant && caught) ? '通过 ✓' : '有问题 ✗'));
+    console.log('[21] 共用解析库: parseDlt/parseSsq/parseSsq500 三个已知坑 + validate 拦截 → ' +
+      ((dltLine === dltWant && ssqLine === ssqWant && s5 === ssqWant && caught) ? '通过 ✓' : '有问题 ✗'));
 
     // 服务端脚本语法（避免手改后跑起来才发现）
     ['server.js', 'lib/parse.js', 'lib/icon.js', 'lib/pwa.js', 'fetch_data.js', 'check_fresh.js'].forEach(f => {
