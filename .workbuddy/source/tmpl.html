@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>许愿算法 1.0.1 · 反拥挤过滤器</title>
+<!-- PWA：让手机「添加到主屏幕」后像个独立 App。
+     全部用相对路径 —— 同一份产物要落在两种位置：本地服务在根目录 `/`，
+     GitHub Pages 在子路径 `/<仓库>/`，写死 '/' 的话 Pages 上会 404。 -->
+<meta name="theme-color" content="#1d4fd8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="许愿算法">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f1f3f5; --card:#fff; --line:#e2e6ea; --line2:#eef1f4;
+  --ink:#14171a; --ink2:#4a5259; --muted:#8a939c;
+  --P:#2563eb; --Pbg:#eef4ff;
+  --E:#0d9488; --Ebg:#e8f7f5;
+  --L:#d97706; --Lbg:#fff5e6;
+  --B:#475569; --Bbg:#eff2f5;
+  --O:#16a34a; --Obg:#ebf9ef;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);padding:0 0 64px;
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{background:#fff;border-bottom:1px solid var(--line);padding:22px 0 18px;margin-bottom:20px}
+.tagline{font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;font-weight:600}
+h1{margin:2px 0 0;font-size:26px;letter-spacing:-.4px;font-weight:800}
+h1 em{font-style:normal;color:var(--P)}
+.sub{margin:8px 0 0;color:var(--ink2);font-size:13px;max-width:780px}
+.disc{margin-top:13px;padding:10px 14px;border-radius:10px;background:#fff8e6;border:1px solid #f2e0b0;font-size:12.5px;color:#7a5a12}
+.disc b{color:#8a5a00}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.card>h2{margin:0;padding:12px 16px;font-size:13px;font-weight:700;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.card>h2 .step{font:700 10.5px ui-monospace,monospace;letter-spacing:.08em;background:var(--ink);color:#fff;border-radius:5px;padding:2px 7px}
+.card>h2 .dot{width:8px;height:8px;border-radius:2px;background:var(--B)}
+.card>h2 .hint{margin-left:auto;font-weight:500;font-size:11.5px;color:var(--muted)}
+.body{padding:16px}
+.sec-p>h2{background:var(--Pbg);color:#1e40af} .sec-p>h2 .dot{background:var(--P)}
+.sec-e>h2{background:var(--Ebg);color:#0f766e} .sec-e>h2 .dot{background:var(--E)}
+.sec-l>h2{background:var(--Lbg);color:#b45309} .sec-l>h2 .dot{background:var(--L)}
+.sec-b>h2{background:var(--Bbg);color:#334155} .sec-b>h2 .dot{background:var(--B)}
+
+label{display:block;font-size:11.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd;
+  font:13px/1.5 inherit;color:var(--ink);outline:none;transition:.15s}
+textarea{resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+input:focus,select:focus,textarea:focus{border-color:var(--P);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.seg{display:flex;gap:6px;background:#f2f4f7;padding:4px;border-radius:9px}
+.seg button{flex:1;border:0;background:transparent;padding:8px 10px;border-radius:6px;cursor:pointer;font:600 13px inherit;color:var(--ink2);transition:.15s}
+.seg button.on{background:#fff;color:var(--P);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.field{flex:1 1 190px;min-width:0}
+
+button.primary{width:100%;border:0;border-radius:10px;padding:15px 20px;cursor:pointer;
+  background:linear-gradient(180deg,#2563eb,#1d4fd8);color:#fff;font:700 15px inherit;letter-spacing:.03em;
+  box-shadow:0 2px 8px rgba(37,99,235,.28);transition:.15s}
+button.primary:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(37,99,235,.32)}
+button.primary:disabled{opacity:.6;cursor:progress;transform:none}
+button.go{background:linear-gradient(180deg,#16a34a,#12813e);box-shadow:0 2px 8px rgba(22,163,74,.28)}
+button.go:hover{box-shadow:0 5px 14px rgba(22,163,74,.32)}
+button.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 16px;cursor:pointer;font:600 13px inherit;color:var(--ink2)}
+button.ghost:hover{border-color:var(--P);color:var(--P)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+/* 摘要表 */
+.sumbox{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+.sumhead{background:linear-gradient(180deg,#f8fafc,#f1f5f9);padding:13px 16px;border-bottom:1px solid var(--line)}
+.sumhead .t{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.sumhead .s{font-size:12.5px;color:var(--ink2);margin-top:3px}
+.sumhead .k{color:var(--P);font-weight:700}
+tr.grp td{background:#f8fafc;font:700 11px inherit;letter-spacing:.08em;color:var(--ink2);padding:8px 16px;text-transform:uppercase}
+table.sum{width:100%;border-collapse:collapse}
+table.sum td{padding:9px 16px;border-bottom:1px solid var(--line2);vertical-align:middle;font-size:12.5px}
+table.sum tr:last-child td{border-bottom:0}
+table.sum td.n{width:132px;color:var(--ink2);font-weight:600}
+table.sum td.v{color:var(--ink)}
+table.sum td.b{width:104px;text-align:right}
+table.sum input,table.sum textarea{font-size:12.5px;padding:6px 9px}
+table.sum textarea{min-height:52px}
+.badge{font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap;border:1px solid}
+.b-auto{background:var(--Obg);border-color:#bfe6cb;color:#15803d}
+.b-user{background:#fff8e6;border-color:#f5d18a;color:#a16207}
+.b-def{background:#f4f6f8;border-color:var(--line);color:var(--muted)}
+.b-edit{background:var(--Pbg);border-color:#bcd2fb;color:#1d4fd8}
+.note{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+.dataage{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{font-size:11.5px;border-radius:20px;padding:3px 11px;border:1px solid var(--line);background:#fbfcfd;color:var(--ink2);font-weight:600}
+.chip.ok{border-color:#bfe6cb;background:var(--Obg);color:#15803d}
+.chip.warn{border-color:#f5d18a;background:#fff8e6;color:#a16207}
+.chip.bad{border-color:#f4b4b4;background:#fdf0f0;color:#b91c1c}
+.chip.info{border-color:#bcd2fb;background:var(--Pbg);color:#1d4fd8}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,470px);gap:18px;align-items:start}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+
+.pipe .pline{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;padding:7px 16px;font-size:12.5px;border-bottom:1px dashed var(--line2)}
+.pipe .pline:last-child{border-bottom:0}
+.pipe .id{font:700 11px ui-monospace,monospace;letter-spacing:.06em;border-radius:4px;text-align:center;padding:2px 0}
+.pipe .pline.p .id{background:var(--Pbg);color:var(--P)}
+.pipe .pline.e .id{background:var(--Ebg);color:var(--E)}
+.pipe .pline.l .id{background:var(--Lbg);color:var(--L)}
+.pipe .nm small{color:var(--muted);margin-left:6px}
+.pipe .val{font:600 12px ui-monospace,monospace;color:var(--ink2);white-space:nowrap}
+.pipe .val.hit{color:var(--O)}
+.pipe .bar{height:4px;background:#eef1f4;border-radius:2px;overflow:hidden;margin:2px 16px 12px}
+.pipe .bar i{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#16a34a);transition:width .5s}
+
+.placeholder{padding:52px 20px;text-align:center;color:var(--muted);font-size:13px}
+.placeholder .big{font-size:34px;margin-bottom:10px;opacity:.35}
+
+.ticket{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.ticket .thead{display:flex;align-items:center;gap:9px;margin-bottom:11px;flex-wrap:wrap}
+.ticket .no{font:700 11px ui-monospace,monospace;color:#fff;background:var(--ink);border-radius:5px;padding:2px 8px}
+.ticket .sp{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:1px 9px}
+.balls{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+.ball{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:800 15px ui-monospace,monospace;color:#fff;position:relative}
+.ball.red{background:linear-gradient(180deg,#ef4444,#c81e1e)}
+.ball.blue{background:linear-gradient(180deg,#3b82f6,#1d4fd8)}
+.ball .sup{position:absolute;top:-7px;right:-4px;font:700 9px ui-monospace,monospace;background:var(--L);border-radius:8px;padding:1px 4px}
+.plus{align-self:center;color:var(--muted);font-weight:700;padding:0 2px}
+.crowdrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line2)}
+.gauge{position:relative;width:56px;height:56px;flex:0 0 56px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;font:800 15px ui-monospace,monospace}
+.crowdmeta{flex:1;min-width:0}
+.crowdmeta .lbl{font-size:11.5px;color:var(--muted);font-weight:600}
+.crowdmeta .txt{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.why{background:#f7f9fb;border-left:3px solid var(--O);border-radius:0 8px 8px 0;padding:9px 12px;font-size:12.5px;color:var(--ink2);margin-top:4px}
+.why b{color:var(--ink)}
+.src{font-size:11.5px;color:var(--muted);margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all}
+.err{background:#fdf0f0;border:1px solid #f4b4b4;color:#b91c1c;border-radius:10px;padding:12px 14px;font-size:13px}
+.welfare .top{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:6px}
+.wbar{height:10px;background:#eef1f4;border-radius:6px;overflow:hidden}
+.wbar i{display:block;height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);width:0;transition:width .6s}
+.foot{margin-top:20px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.8}
+.foot b{color:var(--ink2)}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+button.mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer;font:600 12.5px inherit;color:var(--ink2);transition:.15s}
+button.mini:hover{border-color:var(--P);color:var(--P)}
+button.mini.ok{border-color:#bfe6cb;background:var(--Obg);color:#15803d}
+/* ---------- 手机访问指引 ---------- */
+.mob{margin-top:14px;border:1px solid var(--line);border-radius:11px;background:#fbfcfd;padding:13px 15px}
+.mob .mh{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.mob .mh b{font-size:13px}
+.mob .mh span{font-size:11.5px;color:var(--muted)}
+.mob .mrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.mob .url{font:600 12.5px ui-monospace,Consolas,monospace;background:#fff;border:1px solid var(--line);
+  border-radius:8px;padding:7px 11px;color:var(--ink);user-select:all;word-break:break-all}
+.mob ol{margin:0;padding-left:19px;font-size:12.5px;color:var(--ink2);line-height:1.9}
+.mob ol b{color:var(--ink)}
+.mob .tip{margin-top:9px;font-size:11.5px;color:var(--muted);line-height:1.75}
+.mob .tip b{color:var(--ink2)}
+
+/* ---------- 手机端：添加到主屏幕后当 App 用的微调 ---------- */
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+*{-webkit-tap-highlight-color:transparent}
+@media(max-width:680px){
+  .wrap{padding:0 14px}
+  header{padding:16px 0 14px;margin-bottom:14px}
+  h1{font-size:21px}
+  .sub{font-size:12.5px}
+  .card>h2{padding:11px 13px;font-size:12.5px}
+  .body{padding:13px}
+  .card>h2 .hint{margin-left:0;flex-basis:100%}
+  .balls{gap:6px}
+  .ball{width:33px;height:33px;font-size:13.5px}
+  .sumhead{padding:11px 13px}
+  table.sum td{padding:8px 13px}
+  table.sum td.n{width:98px}
+  table.sum td.b{width:78px}
+  button.primary{padding:16px 18px;font-size:15px}
+  .foot{padding:13px}
+}
+/* 独立 App 模式（display-mode:standalone）：顶部让出状态栏/刘海的真实高度 */
+@media(display-mode:standalone){
+  header{padding-top:calc(18px + env(safe-area-inset-top,0px))}
+}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="tagline">许愿算法 1.0.1</span>
+    <h1>反拥挤<em>过滤器</em></h1>
+    <p class="sub">不预测、不提高中奖概率。中奖概率恒定，能改变的只有「中奖后有多少人跟你一起分」。</p>
+    <div class="disc">
+      <b>声明</b>：本工具仅用于数字生成演示，纯娱乐，<b>无任何预测功能</b>。号码中奖概率均等，本工具<b>不提高</b>中奖概率，仅试图降低中奖后被分摊的概率。请在法定的中国福利彩票 / 中国体育彩票渠道购买，理性参与，未满十八周岁禁止购买彩票。
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ========== 第一步：选日期 ========== -->
+  <section class="card sec-p">
+    <h2><span class="step">STEP 1</span><span class="dot"></span>选一个日期<span class="hint">其余数据自动填入</span></h2>
+    <div class="body">
+      <div class="row">
+        <div class="field" style="flex:1 1 100%">
+          <label>彩种</label>
+          <div class="seg" id="gameSeg">
+            <button data-g="ssq" class="on">双色球（红 6/33 · 蓝 1/16 · 周二/四/日开奖）</button>
+            <button data-g="dlt">大乐透（前区 5/35 · 后区 2/12 · 周一/三/六开奖）</button>
+          </div>
+        </div>
+        <div class="field"><label>你要为哪一天选号</label><input type="date" id="pickDate"></div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="resolve" style="flex:1 1 auto">解析这一期 · 自动填入</button>
+        <button class="ghost" id="today">回到今天</button>
+        <button class="ghost" id="syncData" hidden>更新开奖数据</button>
+        <span class="note" id="syncMsg" style="align-self:center;margin:0"></span>
+      </div>
+      <div class="dataage" id="ageBar" style="margin-top:14px;margin-bottom:0"></div>
+      <div id="mobileBox" hidden></div>
+    </div>
+  </section>
+
+  <!-- ========== 第二步：自动填入预览 ========== -->
+  <section class="card" id="step2" hidden>
+    <h2><span class="step">STEP 2</span><span class="dot" style="background:var(--P)"></span>自动填入结果 · 请过目<span class="hint" id="step2hint"></span></h2>
+    <div class="body" id="sumWrap"></div>
+    <div class="body" style="border-top:1px solid var(--line2);padding-top:14px">
+      <button class="primary go" id="generate" style="cursor:pointer">确认无误 · 生成 5 注</button>
+      <p class="note" style="margin-top:10px;text-align:center">任一项都可直接改；改完再点生成。不想生成就直接关掉，不会有任何动作。</p>
+    </div>
+  </section>
+
+  <!-- ========== 第三步：流水线 + 出号 ========== -->
+  <div class="grid2" id="step3" hidden>
+  <section class="card">
+    <h2><span class="step">STEP 3</span><span class="dot" style="background:var(--O)"></span>14 层流水线 · 顺序不可调<span class="hint">任一不过即重抽</span></h2>
+    <div id="pipe" class="pipe"><div class="placeholder" style="padding:30px 20px">等待生成</div></div>
+  </section>
+
+  <section class="card" id="step3b">
+    <h2><span class="step">STEP 3</span><span class="dot" style="background:var(--O)"></span>出号 · 加权抽样<span class="hint">5 注 · 拥挤度 &gt; 60 不输出</span></h2>
+    <div class="body" id="out"></div>
+    <div class="body" style="border-top:1px solid var(--line2);padding-top:12px">
+      <div class="welfare">
+        <div class="top"><span>预算与公益金</span><span id="welfTxt">—</span></div>
+        <div class="wbar"><i id="welfBar"></i></div>
+      </div>
+      <div class="dataage" id="basecheck" style="margin:12px 0 0"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="foot">
+    <b>为什么这套东西不能提高中奖概率：</b>每一注号码被开出的概率完全相同。「过滤」只改变你选的号码落在人群中的位置，不改变它被抽中的位置。真正被改善的是<b>中奖后的分成</b>——浮动奖池按注数均分，避开大众组合可以在中奖时少分给几个人。这不是玄学，是算术；但它也只在极低概率事件真的发生时才有意义。<br>
+    <b>数据来源：</b>双色球取中国福利彩票官网开奖公告接口；大乐透取 500 彩票网历史数据表。内置快照覆盖范围见页面顶部，超出范围的日期无法解析。<br>
+    <b>自动填入的边界：</b>P/E/L 里凡是能从开奖数据算出来的都已自动填入；<b>E2 实时事件（热搜/赛事/明星）、E3 AI号与主播号、P4 你买过的号码</b>需要联网检索或属于你的私有信息，工具无法自动获取，留空即该层不生效——不编造数据。E4 区域扰动只作文字备忘，要影响拥挤度请填同一区域的「修正 %」。<br>
+    <b>1.0.1 修了三处：</b>
+    ① <b>E1 层原本等于没开</b> —— 自动填进去的是「中秋节」这种名字，工具却拿它当号码去匹配，永远匹配不到任何号，权重 ×0.82 一次都没生效过。现在节日日期会先映射成号码（月 · 日 · 月+日，九一八 → 09/18）再降权。
+    ② <b>5 注的蓝球/后区不再撞号</b> —— 单注概率一个字没变，变的是 5 注之间不再押同一个号：双色球「至少中一次六等奖」由 27.6% 变成 31.25%。蓝球是固定奖 5 元、不按注数均分，重复押号是纯浪费。
+    ③ <b>底盘和 P4 会被记住</b> —— 预算、本周已投入、连黑期数、「我买过的号码」存在你自己浏览器的 localStorage 里，只存这些输入，不上传任何地方。<br>
+    <b>没动的：</b>拥挤度评分里各项占多少分。那些权重全是拍脑袋定的，没有数据支撑，所以不装成有依据——要调就明着调。
+  </div>
+</div>
+
+<script id="DATA_SSQ" type="text/plain">__SSQ_DATA__</script>
+<script id="DATA_DLT" type="text/plain">__DLT_DATA__</script>
+<script id="DATA_CAL" type="text/plain">__CAL_DATA__</script>
+<script>
+/* =========================================================
+   许愿算法 1.0 · 反拥挤过滤器
+   输入日期 → 自动填入 → 人工过目 → 确认生成
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+const GAMES = {
+  ssq:{key:'ssq',name:'双色球',reds:{n:6,min:1,max:33},extra:{n:1,min:1,max:16,label:'蓝球'},
+       price:2,welfare:0.36,drawDow:[0,2,4],poolNote:1.5e9},
+  dlt:{key:'dlt',name:'大乐透',reds:{n:5,min:1,max:35},extra:{n:2,min:1,max:12,label:'后区'},
+       price:2,welfare:0.35,drawDow:[1,3,6],poolNote:null}
+};
+let GAME = GAMES.ssq;
+
+/* ---------- 内置真实开奖数据 ---------- */
+function parseRaw(txt){
+  return txt.trim().split('\n').filter(Boolean).map(function(l){
+    const p=l.trim().split('|');
+    return {code:p[0], date:p[1],
+      reds:p[2].split(',').map(Number), extra:p[3].split(',').map(Number),
+      pool:Number(p[4])||0, firstCnt:Number(p[5])||0, firstAmt:Number(p[6])||0};
+  });
+}
+const DATA = {
+  ssq: parseRaw($('#DATA_SSQ').textContent),
+  dlt: parseRaw($('#DATA_DLT').textContent)
+};
+const CAL = (function(){
+  const o={};
+  $('#DATA_CAL').textContent.trim().split(';').forEach(function(it){
+    const i=it.indexOf('|'); if(i<0) return;
+    const d=it.slice(0,i).trim(); if(d.length!==8) return;
+    o[d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)] = it.slice(i+1).trim();
+  });
+  return o;
+})();
+
+/* ---------- 实时数据 ----------
+   只有「通过本地服务打开」时才可用：file:// 双击打开时浏览器受同源策略限制，
+   取不到彩票接口（两个接口都没有 Access-Control-Allow-Origin 头），只能吃内置快照。
+   经本地服务打开则走 页面 → 本地服务 → 彩票接口，打开即最新。 */
+const IS_HTTP = (function(){
+  try{ return typeof location!=='undefined' && /^https?:$/.test(location.protocol); }catch(e){ return false; }
+})();
+/* 私有地址 = 期望有本地服务（本机 / 局域网）。公网域名（如 *.github.io）= 静态托管，
+   没有后端，取不到 /api/data 是**正常**的，不能报成"服务没连上"。 */
+const IS_LOCAL = (function(){
+  try{
+    const h = location.hostname;
+    return h==='localhost' || h==='127.0.0.1' || h==='[::1]' ||
+      /^192\.168\./.test(h) || /^10\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+  }catch(e){ return false; }
+})();
+let LIVE_STATE = 'off';      // off（本地文件）| loading | ok | fail（本地服务没连上）| static（静态托管，只有内置快照）
+const LIVE_INFO = {};        // {ssq:{from,at,n,...}, dlt:{...}}
+const LIVE_LAN = [];         // 本地服务报出来的局域网地址（手机用同一个）
+
+function applyLive(j){
+  // 只收形如 http://192.168.1.5:17632/ 的地址再塞进 innerHTML，避免任何注入面
+  if(j && j.lan && j.lan.length){
+    LIVE_LAN.length = 0;
+    j.lan.forEach(function(u){ if(/^https?:\/\/[0-9A-Za-z.\-]+:\d+\/$/.test(u)) LIVE_LAN.push(u); });
+  }
+  let hit = 0;
+  ['ssq','dlt'].forEach(function(k){
+    const s = j && j[k];
+    if(!s || !s.ok || !s.text) return;
+    try{
+      const rows = parseRaw(s.text);
+      if(!rows.length) return;
+      DATA[k] = rows;          // 直接用实时数据覆盖内置快照
+      LIVE_INFO[k] = s;
+      hit++;
+    }catch(e){}
+  });
+  if(hit){ LIVE_STATE = 'ok'; renderAgeBar(); }
+  renderMobile();
+  return hit;
+}
+async function loadLive(force){
+  if(!IS_HTTP) return 0;
+  try{
+    const r = await fetch('api/data' + (force ? '?force=1' : ''), {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const n = applyLive(await r.json());
+    if(!n){ LIVE_STATE = IS_LOCAL ? 'fail' : 'static'; renderAgeBar(); }
+    return n;
+  }catch(e){
+    // 静态托管（GitHub Pages）本来就没有后端，取不到是预期内的，不算故障
+    LIVE_STATE = IS_LOCAL ? 'fail' : 'static';
+    renderAgeBar();
+    return 0;
+  }
+}
+
+/* ---------- 随机：外部种子 → mulberry32 ---------- */
+function hashSeed(str){let h=2166136261>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- 日期与期号 ---------- */
+function fmtDate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function parseDate(s){ return new Date(s+'T12:00:00'); }
+function nextDrawDate(fromStr, g){
+  const base = parseDate(fromStr);
+  for(let i=0;i<9;i++){
+    const d = new Date(base.getTime()+i*86400000);
+    if(g.drawDow.indexOf(d.getDay())>=0) return fmtDate(d);
+  }
+  return fromStr;
+}
+function splitCode(code,g){
+  if(g.key==='ssq') return {y:code.slice(0,4), s:code.slice(4)};
+  return {y:'20'+code.slice(0,2), s:code.slice(2)};
+}
+function joinCode(y,s,g){
+  if(g.key==='ssq') return y+String(s).padStart(3,'0');
+  return y.slice(2)+String(s).padStart(3,'0');
+}
+function nextCode(base, drawDate, g){
+  const b = splitCode(base.code, g), dy = drawDate.slice(0,4);
+  if(dy > b.y) return joinCode(dy, 1, g);
+  return joinCode(b.y, Number(b.s)+1, g);
+}
+
+/* ---------- 核心：日期 → 完整输入 ---------- */
+function resolveDate(dateStr, g){
+  const rows = DATA[g.key];
+  if(!rows || !rows.length) throw new Error('内置开奖数据未载入，无法解析日期');
+  let drawDate = nextDrawDate(dateStr, g);
+  const existing = rows.find(function(r){ return r.date===drawDate; });
+  let base, targetCode, carried=false;
+
+  if(existing){
+    const idx = rows.indexOf(existing);
+    base = rows[idx+1];                      // 该期已开奖 → 上期取再前一期
+    if(!base) throw new Error('内置数据不足，缺少 '+drawDate+' 的前一期');
+    const nd = nextDrawDate(fmtDate(new Date(parseDate(drawDate).getTime()+86400000)), g);
+    targetCode = nextCode(existing, nd, g);
+    drawDate = nd;                           // 目标开奖日同步顺延，否则 E1 日历会按已开奖那期取
+    carried = true;
+  }else{
+    base = rows.find(function(r){ return r.date < drawDate; });
+    if(!base) throw new Error('该日期早于内置数据最早一期（'+rows[rows.length-1].date+'，'+rows[rows.length-1].code+'），无法解析。请换一个更近的日期');
+    targetCode = nextCode(base, drawDate, g);
+  }
+
+  const baseIdx = rows.indexOf(base);
+  const hist = rows.slice(baseIdx, baseIdx+80);
+
+  // 热号池：最近 80 期红球频次 Top8
+  const freq={};
+  hist.forEach(function(r){ r.reds.forEach(function(x){ freq[x]=(freq[x]||0)+1; }); });
+  const hotRank = Object.keys(freq).map(function(k){return {n:Number(k),c:freq[k]};})
+    .sort(function(a,b){ return b.c-a.c || a.n-b.n; });
+  const hot = hotRank.slice(0,8);
+
+  // E5 奖池
+  const poolYi = base.pool/1e8;
+  let e5='none', e5note='奖池 '+poolYi.toFixed(2)+' 亿';
+  if(g.poolNote && base.pool >= g.poolNote){
+    e5='big'; e5note='奖池 '+poolYi.toFixed(2)+' 亿，已达派奖启动门槛（≥15 亿）';
+  }else if(g.poolNote){
+    e5note='奖池 '+poolYi.toFixed(2)+' 亿，未达派奖启动门槛（<15 亿）';
+  }
+
+  // E1 日历热点：目标开奖日 ±3 天，并把节日日期映射成号码
+  //   （彩民确实按节日日期买号：九一八 → 09/18，国庆 → 10/01。只放名字不放号码，
+  //     这一层的权重 ×0.82 永远不会命中任何号码，等于白设。）
+  const dc = parseDate(drawDate);
+  const calHits=[], e1nums=[];
+  for(let i=-3;i<=3;i++){
+    const d=new Date(dc.getTime()+i*86400000);
+    const k=fmtDate(d);
+    if(!CAL[k]) continue;
+    calHits.push(CAL[k]);
+    const mm=Number(k.slice(5,7)), dd=Number(k.slice(8,10));
+    [mm, dd, mm+dd].forEach(function(x){
+      if(x>=g.reds.min && x<=g.reds.max && e1nums.indexOf(x)<0) e1nums.push(x);
+    });
+  }
+  e1nums.sort(function(a,b){return a-b;});
+
+  // L1/L2 运气源：全部来自上一期真实开奖数据
+  const seq = Number(splitCode(base.code,g).s);
+  const l2 = [base.firstCnt, Math.round(base.firstAmt/10000), Math.round(base.pool/1e8*100), seq]
+             .filter(function(x){ return x>0; });
+  const l1 = g.name+' '+base.code+' 期 · 一等奖 '+base.firstCnt+' 注 · 单注 '+
+             (base.firstAmt/10000).toFixed(1)+' 万 · 奖池 '+poolYi.toFixed(2)+' 亿';
+
+  return {
+    g:g, inputDate:dateStr, drawDate:drawDate, targetCode:targetCode, carried:carried,
+    base:base, hist:hist, hot:hot, freq:freq,
+    e1: calHits.join(' · '), e1nums:e1nums, e5:e5, e5note:e5note,
+    l1:l1, l2:l2,
+    seed:'WISH-'+g.key.toUpperCase()+'-'+targetCode
+  };
+}
+
+/* ---------- L3 七条映射 ---------- */
+function luckSet(seedNums,g,mode){
+  if(mode==='off') return new Set();
+  const {min,max}=g.reds, span=max-min+1;
+  const out=new Set();
+  const push=function(v){ const x=((Math.round(Math.abs(v))-1)%span+span)%span+min; out.add(x); };
+  seedNums.forEach(function(raw){
+    const s=String(Math.abs(Math.round(raw)));
+    push(raw);                                        // 1 本体
+    let ds=0; for(const c of s) ds+=Number(c)||0;
+    push(ds);                                         // 2 数位
+    push(raw%span);                                   // 3 取模
+    let dg=Math.abs(Math.round(raw));
+    while(dg>9){let t=0;for(const c of String(dg))t+=Number(c)||0;dg=t;}
+    push(dg);                                         // 4 数根
+    if(mode==='all'){
+      push(raw-1); push(raw+1); push(raw-2); push(raw+2);   // 5 邻域
+      if(s.length>=4){                                      // 6 日期拆解
+        const tail=s.slice(-4);
+        push(Number(tail.slice(0,2))); push(Number(tail.slice(2,4)));
+        push(Number(tail.slice(0,2))+Number(tail.slice(2,4)));
+      }
+      push(Math.round(raw/2)); push(Math.round(raw/10)); push(raw%10); // 7 小数缩减
+    }
+  });
+  return out;
+}
+
+/* ---------- P/E 评估 ---------- */
+function zones(g){
+  const {min,max}=g.reds, z=Math.floor((max-min+1)/3);
+  return [[min,min+z-1],[min+z,min+2*z-1],[min+2*z,max]];
+}
+function zoneCounts(nums,g){
+  return zones(g).map(function(p){ return nums.filter(function(x){return x>=p[0]&&x<=p[1];}).length; });
+}
+function sumStats(g){
+  const {n,max}=g.reds, N=max;
+  return {mean:n*(1+N)/2, sd:Math.sqrt(n*(N+1)*(N-n)/12)};
+}
+function evaluate(nums,g,ctx){
+  const {n,min,max}=g.reds;
+  const st=sumStats(g), mean=st.mean, sd=st.sd;
+  const sum=nums.reduce(function(a,b){return a+b;},0);
+  const span=nums[n-1]-nums[0];
+  const zc=zoneCounts(nums,g), zNon=zc.filter(function(c){return c>0;}).length;
+
+  let maxRun=1,run=1;
+  for(let i=1;i<n;i++){ if(nums[i]===nums[i-1]+1){run++;if(run>maxRun)maxRun=run;} else run=1; }
+  const odd=nums.filter(function(x){return x%2;}).length;
+  const tails={}; nums.forEach(function(x){const t=x%10;tails[t]=(tails[t]||0)+1;});
+  const maxTail=Math.max.apply(null,Object.values(tails));
+  let tailPairs=0; Object.values(tails).forEach(function(c){tailPairs+=c*(c-1)/2;});
+  let arith=false;
+  for(let i=0;i+2<n;i++) if(nums[i+2]-nums[i+1]===nums[i+1]-nums[i]) arith=true;
+  let sym=true; const cs=nums[0]+nums[n-1];
+  for(let i=0;i<n;i++) if(nums[i]+nums[n-1-i]!==cs){sym=false;break;}
+
+  const fail=[];
+  // P0 历史同源：用预拼好的 Set 查，别让每个候选重新 join 80 期历史
+  //   （3.4 万候选 × 80 次 join = 270 万次字符串拼接，这才是采样阶段真正的开销）
+  const key=nums.join(',');
+  if(ctx.histSet ? ctx.histSet.has(key) : ctx.history.some(function(h){return h.join(',')===key;})) fail.push('P0 与历史一期完全相同');
+  if(ctx.last){
+    const ov=nums.filter(function(x){return ctx.last.indexOf(x)>=0;}).length;
+    if(ov>=3) fail.push('P0 与上期重号 '+ov+' 个（≥3）');
+  }
+  if(maxRun>=3) fail.push('P1 '+maxRun+' 连号');
+  if(sym&&n>=4) fail.push('P1 完全对称形态');
+  if(maxTail>=3) fail.push('P1 同尾 '+maxTail+' 个（≥3）');
+  if(odd===n||odd===0) fail.push('P1 全'+(odd===n?'奇':'偶'));
+  const mid=(min+max)/2;
+  if(nums.every(function(x){return x>mid;})) fail.push('P1 全大号');
+  if(nums.every(function(x){return x<=mid;})) fail.push('P1 全小号');
+  if(zNon<3) fail.push('P1 号码挤在同一区间');
+  if(sum<mean-1.5*sd||sum>mean+1.5*sd) fail.push('P1 和值 '+sum+' 超出均值±1.5σ');
+  if(span<15) fail.push('P1 跨度 '+span+'（<15）');
+  const lucky=nums.filter(function(x){return [6,8,9,16,18,19,26,28,29,36].indexOf(x)>=0;}).length;
+  if(lucky>=3) fail.push('P2 谐音吉利数 '+lucky+' 个（≥3）');
+  const hotMin=Math.min(5,n);
+  if(ctx.hot.length && nums.filter(function(x){return ctx.hot.indexOf(x)>=0;}).length>=hotMin) fail.push('P3 与热号池重叠 ≥'+hotMin);
+  if(ctx.mine.length && ctx.mine.some(function(m){return nums.filter(function(x){return m.indexOf(x)>=0;}).length>=hotMin;})) fail.push('P4 与历史自购重号 ≥'+hotMin);
+
+  let s=0; const why=[];
+  const allLow=nums.every(function(x){return x<=31;});
+  if(allLow){ s+=10; why.push('全部落在 1-31'); }
+  const month=nums.filter(function(x){return x<=12;}).length;
+  if(month>=3){ s+=Math.min(16,(month-1)*6); why.push(month+' 个数落在 1-12 月号区'); }
+  if(maxRun===2){ s+=6; why.push('含 1 组二连'); }
+  s+=Math.min(16,tailPairs*5); if(tailPairs) why.push(tailPairs+' 组同尾');
+  if(lucky>=2){ s+=8; why.push(lucky+' 个谐音吉利数'); }
+  if(arith){ s+=8; why.push('存在三项等差'); }
+  const zdev=zc.reduce(function(a,c){return a+Math.abs(c-n/3);},0);
+  s+=zdev*5; if(zdev>=2) why.push('区间分布偏斜');
+  if(ctx.hot.length){ const ov=nums.filter(function(x){return ctx.hot.indexOf(x)>=0;}).length; if(ov){s+=ov*7; why.push(ov+' 个撞热号池');} }
+  if(ctx.last){ const ov=nums.filter(function(x){return ctx.last.indexOf(x)>=0;}).length; if(ov){s+=ov*6; why.push(ov+' 个与上期重复');} }
+  if(span<20){ s+=6; why.push('跨度偏窄'); }
+  s+=Math.min(12,(Math.abs(sum-mean)/(1.5*sd))*12);
+  if(ctx.e3.length){ const ov=nums.filter(function(x){return ctx.e3.indexOf(x)>=0;}).length; if(ov){s+=ov*9; why.push(ov+' 个撞 AI/主播号');} }
+  const rows2={}; nums.forEach(function(x){const r=Math.floor((x-1)/10);rows2[r]=(rows2[r]||0)+1;});
+  if(Math.max.apply(null,Object.values(rows2))>=Math.max(3,n-1)){ s+=8; why.push('号码密集在同一数字段'); }
+  if(!allLow && nums.some(function(x){return x>31;})) s-=7;
+  if(month<=2) s-=5;
+  if(tailPairs===0) s-=4;
+  if(zdev===0) s-=8;
+  if(maxRun===1) s-=4;
+
+  s=s*(1+ctx.envMod/100);
+  s=Math.max(0,Math.min(100,Math.round(s)));
+  return {ok:fail.length===0, fail:fail, score:s, why:why, sum:sum, span:span, zc:zc, maxRun:maxRun};
+}
+
+function pickReds(g,rand){
+  const pool=[]; for(let i=g.reds.min;i<=g.reds.max;i++) pool.push(i);
+  const n=g.reds.n;
+  for(let i=0;i<n;i++){ const j=i+Math.floor(rand()*(pool.length-i)); const t=pool[i];pool[i]=pool[j];pool[j]=t; }
+  return pool.slice(0,n).sort(function(a,b){return a-b;});
+}
+function pickExtra(g,rand){
+  const pool=[]; for(let i=g.extra.min;i<=g.extra.max;i++) pool.push(i);
+  const n=g.extra.n;
+  for(let i=0;i<n;i++){ const j=i+Math.floor(rand()*(pool.length-i)); const t=pool[i];pool[i]=pool[j];pool[j]=t; }
+  return pool.slice(0,n).sort(function(a,b){return a-b;});
+}
+
+/* ---------- 后区 / 蓝球的「不撞号」计划 ----------
+   一次洗牌，把后区号码分摊给 5 注，注与注之间不再押同一个号。
+   单注概率完全没变（仍是均匀随机），变的只是 5 注之间的重复 ——
+   双色球 5 注蓝球互异后，「至少中一次六等奖」由 27.6% 提升到 31.25%。
+   蓝球是固定奖 5 元、不按注数均分，重复押号没有任何好处。 */
+function extraPlan(g,rand,count){
+  if(count<=1) return null;
+  const pool=[]; for(let i=g.extra.min;i<=g.extra.max;i++) pool.push(i);
+  for(let i=0;i<pool.length;i++){ const j=i+Math.floor(rand()*(pool.length-i)); const t=pool[i];pool[i]=pool[j];pool[j]=t; }
+  if(pool.length < g.extra.n*count) return null;         // 池子不够 → 逐注随机，不硬凑
+  const out=[];
+  for(let i=0;i<count;i++){
+    out.push(pool.slice(i*g.extra.n,(i+1)*g.extra.n).sort(function(a,b){return a-b;}));
+  }
+  return out;
+}
+function extraCover(tickets,g){
+  const span=g.extra.max-g.extra.min+1, seen={}, seenN={};
+  tickets.forEach(function(t){ seen[t.extra.join(',')]=1; t.extra.forEach(function(x){ seenN[x]=1; }); });
+  const uniq=Object.keys(seen).length, cover=Object.keys(seenN).length;
+  const total = g.extra.n===1 ? span : span*(span-1)/2;
+  return {span:span, uniq:uniq, cover:cover, total:total, p:uniq/total*100};
+}
+/* 纯文本导出：给投注站或手机备忘录，一行一注 */
+function ticketsText(tickets,g){
+  const p=function(x){ return String(x).padStart(2,'0'); };
+  return tickets.map(function(t,i){
+    return '第'+(i+1)+'注  '+t.nums.map(p).join(' ')+'  +  '+t.extra.map(p).join(' ');
+  }).join('\n');
+}
+function copyText(txt,onDone){
+  const ok=function(v){ if(onDone) onDone(!!v); };
+  const viaExec=function(){
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=txt; ta.setAttribute('readonly','');
+      ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='0';
+      document.body.appendChild(ta); ta.select();
+      if(ta.setSelectionRange) ta.setSelectionRange(0,txt.length);
+      const r=document.execCommand('copy');
+      document.body.removeChild(ta);
+      return r;
+    }catch(e){ return false; }
+  };
+  try{
+    if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ ok(true); },function(){ ok(viaExec()); });
+      return;
+    }
+  }catch(e){}
+  ok(viaExec());
+}
+
+/* ---------- 本地记忆：跨期状态 ----------
+   「本周已投入」「连黑期数」是跨期累积量，每次打开都归零等于这个功能不存在；
+   P4 我买过的号码、E2/E3 手填项也一样，重填是纯浪费。存 localStorage。 */
+const LS_KEY='wish-algo-1.0';
+const LS=(function(){
+  try{ const t=window.localStorage; t.setItem('__wa__','1'); t.removeItem('__wa__'); return t; }catch(e){ return null; }
+})();
+function lsAll(){ try{ return LS?JSON.parse(LS.getItem(LS_KEY)||'{}'):{}; }catch(e){ return {}; } }
+function lsGet(k,d){ const o=lsAll(); return (o[k]===undefined||o[k]===null||o[k]==='')?d:o[k]; }
+function lsSetMany(obj){ try{ if(!LS) return; const o=lsAll(); for(const k in obj) o[k]=obj[k]; LS.setItem(LS_KEY,JSON.stringify(o)); }catch(e){} }
+
+/* =========================================================
+   状态
+   ========================================================= */
+let RES = null;              // 解析结果
+let LUCK_CUR = new Set();    // 当前 L 层加权号码（渲染用）
+function LUCK_HAS(x){ return LUCK_CUR.has(x); }
+
+/* ---------- 渲染 Step 2 摘要 ---------- */
+function badge(kind){
+  const map={auto:['自动','b-auto'],user:['需自填','b-user'],def:['默认','b-def'],edit:['已改','b-edit']};
+  const v=map[kind]||map.def;
+  return '<span class="badge '+v[1]+'" data-badge>'+v[0]+'</span>';
+}
+function rowInput(id,label,val,kind,placeholder,note,type){
+  const t = type||'text';
+  return '<tr>'
+    +'<td class="n">'+label+'</td>'
+    +'<td class="v"><input id="'+id+'" type="'+t+'" value="'+String(val==null?'':val).replace(/"/g,'&quot;')+'" placeholder="'+placeholder+'">'
+    +(note?'<div class="note">'+note+'</div>':'')+'</td>'
+    +'<td class="b">'+badge(kind)+'</td></tr>';
+}
+function rowTextarea(id,label,val,kind,placeholder,note){
+  return '<tr>'
+    +'<td class="n">'+label+'</td>'
+    +'<td class="v"><textarea id="'+id+'" placeholder="'+placeholder+'">'+String(val==null?'':val)+'</textarea>'
+    +(note?'<div class="note">'+note+'</div>':'')+'</td>'
+    +'<td class="b">'+badge(kind)+'</td></tr>';
+}
+function rowRead(label,val,note){
+  return '<tr><td class="n">'+label+'</td>'
+    +'<td class="v mono">'+val+(note?'<div class="note">'+note+'</div>':'')+'</td>'
+    +'<td class="b">'+badge('auto')+'</td></tr>';
+}
+function rowGroup(t){
+  return '<tr class="grp"><td colspan="3">'+t+'</td></tr>';
+}
+
+function renderSummary(r){
+  const g=r.g;
+  const hotTop = r.hot.slice(0,4).map(function(h){return String(h.n).padStart(2,'0')+'（'+h.c+'次）';}).join(' · ');
+  const baseStr = r.base.reds.map(function(x){return String(x).padStart(2,'0');}).join(' ')
+                + ' + ' + r.base.extra.map(function(x){return String(x).padStart(2,'0');}).join(' ');
+
+  let h='';
+  // 私有输入与跨期状态：上次填过的直接带出来，不让人每期重填
+  const stored = lsAll();
+  const keep = {
+    mine: lsGet('mine',''), e2: lsGet('e2',''), e3: lsGet('e3',''), e4: lsGet('e4',''),
+    emod: lsGet('emod','0'), lweight: lsGet('lweight','0.6'),
+    budget: lsGet('budget','20'), spent: lsGet('spent','0'), loss: lsGet('loss','0')
+  };
+  // 只有真在 localStorage 里存过才说「已记住」——别把默认值也标成记住
+  const mem=k=> (stored[k]!==undefined && stored[k]!=='') ? '　已记住上次填写' : '';
+  h+='<div class="sumhead"><div class="t">你选了 '+r.inputDate+' → 目标期 <span class="k">'+r.targetCode+'</span>（开奖日 '+r.drawDate+'）</div>'
+    +'<div class="s">上一期参考 <b>'+r.base.code+'</b>（'+r.base.date+'）：'
+    +'<span class="mono">'+baseStr+'</span>　·　历史样本 '+r.hist.length+' 期'
+    +(r.carried?'　·　<span style="color:#a16207">你选的日期落在已开奖期，已自动顺延到下一期</span>':'')
+    +'</div></div>';
+
+  h+='<table class="sum">';
+  h+=rowGroup('P · 概率因子（反拥挤主战场）');
+  h+=rowRead('目标期号', r.targetCode, '开奖日 '+r.drawDate);
+  h+=rowRead('上期开奖', '<span class="mono">'+baseStr+'</span>', r.base.code+' · '+r.base.date);
+  h+=rowRead('历史样本', r.hist.length+' 期', '取目标期之前最近 80 期，供 P0 / P4 比对');
+  // r.hot 是 [{n,c}] 对象数组，别忘了取 .n —— 直接 String(x) 会渲染成一排 [object Object]
+  h+=rowRead('热号池 Top8', r.hot.map(function(x){return String(x.n).padStart(2,'0');}).join(' '),
+             '近 80 期频次最高：'+hotTop+'　撞 ≥5 个作废');
+  h+=rowTextarea('mine','P4 我买过的号码',keep.mine,'user','每行一注，如&#10;03 08 16 21 27 31',
+             '留空 = P4 层不生效。这是你的私有信息，工具无法获取'+mem('mine'));
+
+  h+=rowGroup('E · 环境因子（找这一期特有的拥挤）');
+  h+=rowInput('e1','E1 日历热点', r.e1, 'auto', '如 中秋 / 龙年 / 教师节',
+              '自动取目标开奖日 ±3 天内的节气与节日，并映射成号码（月 · 日 · 月+日）对命中号码降权'
+              +((r.e1nums&&r.e1nums.length)?('　本期映射出 <b>'+r.e1nums.map(function(x){return String(x).padStart(2,'0');}).join(' ')+'</b>'):'　本期无日历事件'));
+  h+=rowInput('e2','E2 实时事件', keep.e2, 'user','如 热搜 38 / 冠军球衣 11',
+              '需联网检索热搜·赛事·明星，工具无法自动获取；留空 = E2 层不生效'+mem('e2'));
+  h+=rowInput('e3','E3 AI号 / 主播号', keep.e3, 'user','如 07 12 19 25 30 33',
+              '需人工采集他人荐号；留空 = E3 权重压制不生效。不编造数据'+mem('e3'));
+  h+=rowInput('e4','E4 区域扰动（备忘）', keep.e4, 'user','如 台风 / 泉州中出头奖',
+              '仅作文字备忘，<b>不参与计算</b>；要影响拥挤度请填下面那行「修正 %」'+mem('e4'));
+  h+=rowRead('E5 奖池派奖', g.name+' 奖池 '+ (r.base.pool/1e8).toFixed(2) +' 亿', r.e5note+'　（自动）');
+  h+=rowInput('emod','E4 手动修正 %', keep.emod, 'def','-10 ~ 10','正数=更拥挤，负数=更冷门，直接乘在拥挤度上'+mem('emod'));
+
+  h+=rowGroup('L · 欧气因子（只做加权，不改概率）');
+  h+=rowInput('l1','L1 运气源', r.l1, 'auto','大奖得主 / 黑马 / 意外进账','自动取自上一期真实开奖公告');
+  h+=rowInput('l2','L2 提数字', r.l2.join(' '), 'auto','空格分隔',
+              '自动提取：一等奖注数 · 单注(万) · 奖池(亿×100) · 期号序号');
+  h+=rowInput('lweight','L4 加权强度', keep.lweight,'def','0 = 关闭，1 = 满权重','命中 L3 号码的权重加成强度'+mem('lweight'));
+  h+='<tr><td class="n">L3 七条映射</td><td class="v"><select id="l3mode">'
+    +'<option value="all">全部启用（本体·数位·取模·数根·邻域·日期拆解·小数缩减）</option>'
+    +'<option value="core">仅核心四条（本体·数位·取模·数根）</option>'
+    +'<option value="off">关闭 L3</option></select></td><td class="b">'+badge('def')+'</td></tr>';
+
+  h+=rowGroup('底盘 · 不可越线（这三项是跨期累积量，已存在本机，不会因为刷新归零）');
+  h+=rowRead('随机种子','<span class="mono">'+r.seed+'</span>','由彩种+期号派生，同数据必得同结果');
+  h+=rowInput('budget','周预算上限（元）', keep.budget,'def','如 20','');
+  h+=rowInput('spent','本周已投入（元）', keep.spent,'def','如 0','跨期累积量，本机记住；出票后自己加上本期成本（工具不猜你买了几注）');
+  h+=rowInput('loss','连黑期数', keep.loss,'def','如 0','≥3 触发冷却提醒；本机记住，工具无法判断你有没有中奖');
+  h+=rowRead('本期成本','5 注 × '+g.price+' 元 = '+(5*g.price)+' 元','公益金约 '+(5*g.price*g.welfare).toFixed(2)+' 元（按 '+(g.welfare*100).toFixed(0)+'% 计）');
+  h+='</table>';
+  if(!LS) h+='<p class="note" style="margin:10px 0 0">提示：当前浏览器不允许本页使用本地存储（file:// 或隐私模式常见），底盘与 P4 只能当次有效，刷新即丢。</p>';
+
+  $('#sumWrap').innerHTML=h;
+  $('#step2hint').textContent='共 '+((h.match(/<tr>/g)||[]).length)+' 项，逐项确认后再生成';
+  $('#step2').hidden=false;
+  $('#step3').hidden=false;
+  $('#pipe').innerHTML='<div class="placeholder" style="padding:30px 20px">已就绪，点「确认无误 · 生成 5 注」</div>';
+  $('#out').innerHTML='<div class="placeholder"><div class="big">○</div>等待确认</div>';
+
+  // 徽章：一旦改动就变「已改」
+  $$('#sumWrap input, #sumWrap textarea, #sumWrap select').forEach(function(el){
+    el.addEventListener('input',function(){
+      const td=el.closest('tr'), b=td?td.querySelector('[data-badge]'):null;
+      if(b){ b.className='badge b-edit'; b.textContent='已改'; }
+    });
+    if(el.tagName==='SELECT') el.addEventListener('change',function(){
+      const td=el.closest('tr'), b=td?td.querySelector('[data-badge]'):null;
+      if(b){ b.className='badge b-edit'; b.textContent='已改'; }
+    });
+  });
+  renderAgeBar();
+  $('#step2').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- 数据时效条 ---------- */
+function renderAgeBar(){
+  const s=DATA.ssq, d=DATA.dlt;
+  const box=$('#ageBar');
+  if(!s.length || !d.length){
+    box.innerHTML='<span class="chip bad">开奖数据未载入或为空，无法解析日期</span>';
+    return;
+  }
+  // 数据新鲜度：两彩种交替开奖，正常情况下最新一期距今 ≤1 天（周五无开奖）
+  const latest = s[0].date > d[0].date ? s[0].date : d[0].date;
+  const days = Math.round((parseDate(fmtDate(new Date())) - parseDate(latest))/86400000);
+  const age = days<=0 ? '今天' : days+' 天前';
+  let head;
+  if(LIVE_STATE==='ok'){
+    head='<span class="chip ok">实时数据 · 已连本地服务，最新开奖 '+latest+'（'+age+'）</span>';
+  }else if(LIVE_STATE==='loading'){
+    head='<span class="chip info">'+(IS_LOCAL?'正在向本地服务取最新开奖数据…':'正在检查更新…')+'</span>';
+  }else if(LIVE_STATE==='fail'){
+    head='<span class="chip warn">本地服务没连上，已退回内置快照（最新 '+latest+'，'+age+'）—— 点「更新数据」重试</span>';
+  }else if(LIVE_STATE==='static'){
+    head='<span class="chip '+(days<=1?'ok':(days<=3?'warn':'bad'))+'">内置快照 · 每天自动更新（最新 '+latest+'，'+age+'）</span>';
+  }else if(days<=1){
+    head='<span class="chip ok">数据新鲜 · 最新开奖 '+latest+'（'+age+'）</span>';
+  }else if(days<=3){
+    head='<span class="chip warn">数据滞后 '+days+' 天 · 最新开奖 '+latest+'</span>';
+  }else{
+    head='<span class="chip bad">数据已过期 '+days+' 天（最新 '+latest+'），期号可能算错 —— 请更新内置数据</span>';
+  }
+  const tag=function(k){ return LIVE_INFO[k] ? ('实时'+(LIVE_INFO[k].from==='cache'?'·服务端缓存':'')+'｜') : '内置｜'; };
+  box.innerHTML= head
+   +'<span class="chip info">双色球'+tag('ssq')+s[s.length-1].code+'（'+s[s.length-1].date+'）→ '+s[0].code+'（'+s[0].date+'），共 '+s.length+' 期</span>'
+   +'<span class="chip info">大乐透'+tag('dlt')+d[d.length-1].code+'（'+d[d.length-1].date+'）→ '+d[0].code+'（'+d[0].date+'），共 '+d.length+' 期</span>'
+   +'<span class="chip info">日历内置：'+Object.keys(CAL).length+' 条（2026 年节气 + 节日）</span>'
+   +'<span class="chip warn">超出上述范围的日期无法解析</span>'
+   +((LIVE_STATE==='ok'||LIVE_STATE==='static') ? ''
+      : '<span class="chip warn">当前是本地文件直开、取不到网络；双击「启动许愿算法.cmd」打开可自动获取最新开奖</span>');
+}
+
+/* ---------- 手机访问：把局域网地址摆到页面上，省得手输 IP ---------- */
+function renderMobile(){
+  const box = $('#mobileBox'); if(!box) return;
+  box.hidden = false;
+
+  // 公网静态托管（GitHub Pages）：页面本身就是 App，没有"电脑别关"这回事
+  if(IS_HTTP && !IS_LOCAL){
+    box.innerHTML = '<div class="mob"><div class="mh"><b>这就是 App 本身</b>'
+      +'<span>手机浏览器打开本页 → 菜单里选「添加到主屏幕」，之后永不用再开电脑</span></div>'
+      +'<div class="tip">开奖数据每天自动更新一次；上方标注的日期就是当前快照的新鲜度。'
+      +'想手动拉最新，电脑上双击「启动许愿算法.cmd」用本地服务打开即可。</div></div>';
+    return;
+  }
+  if(!IS_HTTP){
+    box.innerHTML = '<div class="mob"><div class="mh"><b>想在手机上用？</b>'
+      +'<span>双击根目录的「启动许愿算法.cmd」，用本地服务打开本页，这里就会给出手机地址</span></div></div>';
+    return;
+  }
+  if(!LIVE_LAN.length){
+    box.innerHTML = '<div class="mob"><div class="mh"><b>手机上用</b>'
+      +'<span>正在取局域网地址…（电脑没连 WiFi / 网线，或服务用了 --local 时不会有）</span></div></div>';
+    return;
+  }
+  const rows = LIVE_LAN.map(function(u){
+    return '<div class="mrow"><code class="url">'+u+'</code>'
+      +'<button class="mini" data-url="'+u+'">复制地址</button></div>';
+  }).join('');
+  box.innerHTML = '<div class="mob">'
+    +'<div class="mh"><b>在手机上用（像个 App）</b><span>电脑上这个窗口别关，它就是数据来源</span></div>'
+    + rows
+    +'<ol>'
+    +'<li>手机连上<b>同一个 WiFi</b></li>'
+    +'<li>把上面地址<b>发到手机</b>（复制后发给自己最省事），用手机<b>浏览器</b>打开</li>'
+    +'<li>浏览器菜单里选 <b>「添加到主屏幕」</b>（iPhone 是 Safari 分享按钮 → 添加到主屏幕）</li>'
+    +'</ol>'
+    +'<div class="tip">打不开先查两件事：电脑<b>防火墙</b>要放行 Node（首次启动弹窗选「允许」）；手机别用<b>流量</b>，得在同一个 WiFi。'
+    +'iPhone 加完主屏是真·独立窗口；安卓走 http 只能建快捷方式（会带地址栏），要完全独立窗口得配 HTTPS。</div>'
+    +'</div>';
+  Array.prototype.forEach.call(box.querySelectorAll('button[data-url]'), function(b){
+    b.onclick = function(){
+      const self = this;
+      copyText(this.getAttribute('data-url'), function(ok){
+        self.className = ok ? 'mini ok' : 'mini';
+        self.textContent = ok ? '已复制' : '复制失败';
+        setTimeout(function(){ self.className='mini'; self.textContent='复制地址'; }, 1800);
+      });
+    };
+  });
+}
+
+/* ---------- 生成 ---------- */
+function generate(){
+  const r=RES; if(!r) return;
+  const g=r.g;
+  const get=function(id){ return $('#'+id) ? $('#'+id).value : ''; };
+  const nums=function(s){ return (String(s).match(/\d+/g)||[]).map(Number); };
+
+  const hotArr = r.hot.map(function(x){return x.n;});
+  const mine = String(get('mine')||'').split('\n').map(function(l){
+    const a=nums(l).filter(function(x){return x>=g.reds.min&&x<=g.reds.max;});
+    return a.slice(0,g.reds.n);
+  }).filter(function(a){ return a.length===g.reds.n; });
+  const inRange=function(x){ return x>=g.reds.min && x<=g.reds.max; };
+  const e3 = nums(get('e3')).filter(inRange);
+  // E1 = 手填数字 ∪ 日历事件自动映射出的号码（九一八 → 09/18）
+  const e1set={};
+  nums(get('e1')).concat(r.e1nums||[]).filter(inRange).forEach(function(x){ e1set[x]=1; });
+  const e1n = Object.keys(e1set).map(Number);
+  const e2n = nums(get('e2')).filter(inRange);
+  const envMod = Math.max(-10,Math.min(10,Number(get('emod'))||0));
+  const e5mod = r.e5==='big' ? 8 : 0;    // 派奖期奖池膨胀 → 进场的人更多 → 更拥挤
+  const envTotal = envMod + e5mod;
+  const l3mode = get('l3mode')||'all';
+  const lw = Math.max(0,Number(get('lweight'))||0);
+  const LUCK = luckSet(nums(get('l2')), g, l3mode);
+  LUCK_CUR = LUCK;
+
+  const ctx = {history:r.hist.map(function(x){return x.reds;}), last:r.base.reds,
+               histSet:new Set(r.hist.map(function(x){return x.reds.join(',');})),
+               hot:hotArr, mine:mine, e3:e3, luck:LUCK, envMod:envTotal};
+
+  const seedStr = r.seed + '|' + r.targetCode;
+  const rand = mulberry32(hashSeed(seedStr));
+
+  const MAXTRY=400000, POOLCAP=12000;
+  const pool=[], stat={P0:0,P1:0,P2:0,P3:0,P4:0};
+  let tried=0, crowdCut=0;
+  for(let i=0;i<MAXTRY&&pool.length<POOLCAP;i++){
+    tried++;
+    const c=pickReds(g,rand);
+    const ev=evaluate(c,g,ctx);
+    if(!ev.ok){ const f=ev.fail[0].slice(0,2); if(stat[f]!==undefined) stat[f]++; continue; }
+    if(ev.score>60){ crowdCut++; continue; }
+    ev.nums=c; pool.push(ev);
+  }
+
+  const wfn=function(n){
+    let w=1;
+    n.forEach(function(x){
+      if(LUCK.has(x)) w+=lw;
+      if(e1n.indexOf(x)>=0) w*=0.82;     // 节日号 = 大众号，降权
+      if(e2n.indexOf(x)>=0) w*=0.82;
+    });
+    return Math.max(w,0.05);
+  };
+  // 权重只跟号码有关、与 power 无关 → 全池只算一次，重试时不再重算
+  const wBase=new Array(pool.length);
+  for(let i=0;i<pool.length;i++) wBase[i]=wfn(pool[i].nums);
+
+  const schedule=[1,1,0.5,0.5,0.08], picks=[];
+  function drawOne(power){
+    const ws=new Array(pool.length); let tot=0;
+    for(let i=0;i<pool.length;i++){ const w=Math.pow(wBase[i],power); ws[i]=w; tot+=w; }
+    for(let att=0;att<300;att++){
+      let rr=rand()*tot, idx=pool.length-1;
+      for(let i=0;i<ws.length;i++){ rr-=ws[i]; if(rr<=0){idx=i;break;} }
+      const c=pool[idx];
+      if(!picks.some(function(p){return p.nums.filter(function(x){return c.nums.indexOf(x)>=0;}).length>=4;})) return c;
+    }
+    return null;
+  }
+  schedule.forEach(function(p){ const it=drawOne(p); if(it) picks.push(it); });
+
+  const extras = extraPlan(g, rand, picks.length);      // 后区不撞号
+  const tickets = picks.map(function(c,i){
+    return {nums:c.nums, extra:(extras&&extras[i])||pickExtra(g,rand), score:c.score, why:c.why,
+            span:c.span, sum:c.sum, zc:c.zc, power:schedule[i],
+            luckHits:c.nums.filter(function(x){return LUCK.has(x);})};
+  });
+
+  renderPipe({tried:tried, pool:pool.length, passRate:pool.length/tried, stat:stat,
+              crowdCut:crowdCut, envTotal:envTotal, LUCK:LUCK, l3mode:l3mode,
+              e1n:e1n.length,
+              l1:r.l1, l2:get('l2'), hot:hotArr.length, histN:r.hist.length});
+  renderOut(tickets,g,seedStr,LUCK);
+  renderBase(tickets.length,g,get('budget'),get('spent'),get('loss'));
+  lsSetMany({mine:get('mine'), e2:get('e2'), e3:get('e3'), e4:get('e4'), emod:get('emod'),
+             budget:get('budget'), spent:get('spent'), loss:get('loss'), lweight:get('lweight')});
+}
+
+/* ---------- 渲染流水线 ---------- */
+function renderPipe(o){
+  const rows=[
+    ['P','P0','历史同源','与历史完全相同 · 与上期重号 <3'],
+    ['P','P1','极端形态','连号/对称/同尾/全奇偶/单区/和值/跨度'],
+    ['P','P2','大众偏好','生日扎堆 · 吉利谐音'],
+    ['P','P3','拥挤黑名单','热号池重叠 <'+Math.min(5,GAME.reds.n)],
+    ['P','P4','自我重复','历史自购重叠 <'+Math.min(5,GAME.reds.n)],
+    ['E','E1','日历热点','节日日期 → 号码（如九一八 → 9/18），命中权重 ×0.82 · 本期映射 '+(o.e1n||0)+' 个'],
+    ['E','E2','实时事件','命中号码权重 ×0.82'],
+    ['E','E3','AI 与主播号','拥挤度 +9/个'],
+    ['E','E4','区域扰动','拥挤度修正 '+o.envTotal.toFixed(0)+'%'],
+    ['E','E5','奖池派奖','派奖期拥挤上浮'],
+    ['L','L1','运气源',o.l1.slice(0,42)],
+    ['L','L2','提数字',o.l2],
+    ['L','L3','七条映射','映射出 '+o.LUCK.size+' 个加权号码（'+({all:'全开',core:'核心四条',off:'关闭'}[o.l3mode])+'）'],
+    ['L','L4','权重合成','2 全权重 · 2 开方 · 1 近平均匀']
+  ];
+  let h='';
+  rows.forEach(function(r){
+    const cls=r[0].toLowerCase(), id=r[1], nm=r[2], desc=r[3];
+    const n = (id[0]==='P') ? (o.stat[id]?'已拦截 '+o.stat[id]+' 注 · ':'') + '硬过滤' : '已应用';
+    h+='<div class="pline '+cls+(id[0]==='P'&&o.stat[id]?'':'')+'">'
+      +'<span class="id">'+id+'</span>'
+      +'<span class="nm">'+nm+'<small>'+desc+'</small></span>'
+      +'<span class="val'+(id[0]==='P'&&o.stat[id]?' hit':'')+'">'+n+'</span></div>';
+  });
+  h+='<div class="bar"><i style="width:'+Math.min(100,o.passRate*100).toFixed(1)+'%"></i></div>';
+  h+='<div class="pline" style="border-bottom:0"><span class="id" style="background:var(--Obg);color:#16a34a">出号</span>'
+    +'<span class="nm">加权抽样<small>候选池 '+o.pool.toLocaleString()+' 注 / 尝试 '+o.tried.toLocaleString()+' 次 · 拥挤度门槛额外剔除 '+o.crowdCut.toLocaleString()+' 注</small></span>'
+    +'<span class="val" style="color:#16a34a">通过率 '+(o.passRate*100).toFixed(2)+'%</span></div>';
+  $('#pipe').innerHTML=h;
+}
+
+/* ---------- 渲染出号 ---------- */
+function renderOut(tickets,g,seedStr,LUCK){
+  if(!tickets.length){
+    $('#out').innerHTML='<div class="err">候选池为空：当前过滤条件叠加后无解。检查是否有过多手填的号码（P4 / E3），或把和值/跨度类约束放宽后重试。</div>';
+    return;
+  }
+  const ec=extraCover(tickets,g);
+  const ecTxt = g.extra.n===1
+    ? (g.extra.label+' '+ec.uniq+'/'+ec.span+' 个互不重复 · 至少中一次六等奖 '+ec.p.toFixed(2)+'%（允许重号时仅 27.6%）')
+    : (g.extra.label+' '+ec.uniq+' 组互不重复 · 覆盖 '+ec.cover+'/'+ec.span+' 个号 · 至少中一次后区 '+ec.p.toFixed(2)+'%');
+  let h='';
+  h+='<div class="toolbar">'
+    +'<button class="mini" id="copyBtn" type="button">复制这 '+tickets.length+' 注</button>'
+    +'<span class="note" id="copyMsg" style="margin:0"></span>'
+    +'</div>';
+  h+='<div class="dataage" style="margin-bottom:12px"><span class="chip info">'+ecTxt+'</span></div>';
+  tickets.forEach(function(t,i){
+    const powerTag=[1,1,0.5,0.5,0.08][i];
+    const tag = powerTag===1?'全权重':(powerTag===0.5?'权重开方':'近平均匀');
+    const col = t.score<30?'#16a34a':(t.score<45?'#d97706':'#dc2626');
+    const dash=2*Math.PI*24, off=dash*(1-t.score/100);
+    h+='<div class="ticket">';
+    h+='<div class="thead"><span class="no">第 '+(i+1)+' 注</span><span class="sp">'+tag+'</span><span class="sp">'+g.name+'</span></div>';
+    h+='<div class="balls">';
+    t.nums.forEach(function(x){
+      h+='<span class="ball red">'+String(x).padStart(2,'0')+(LUCK.has(x)?'<span class="sup">加权</span>':'')+'</span>';
+    });
+    h+='<span class="plus">+</span>';
+    t.extra.forEach(function(x){ h+='<span class="ball blue">'+String(x).padStart(2,'0')+'</span>'; });
+    h+='</div>';
+    h+='<div class="crowdrow">'
+      +'<div class="gauge"><svg width="56" height="56">'
+      +'<circle cx="28" cy="28" r="24" fill="none" stroke="#eef1f4" stroke-width="6"/>'
+      +'<circle cx="28" cy="28" r="24" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+dash+'" stroke-dashoffset="'+off+'"/>'
+      +'</svg><div class="num" style="color:'+col+'">'+t.score+'</div></div>'
+      +'<div class="crowdmeta"><div class="lbl">拥挤度评分（0-100，越低越好）</div>'
+      +'<div class="txt">形态：跨度 '+t.span+' · 和值 '+t.sum+' · 区间 '+t.zc.join('/')+'</div></div></div>';
+    h+='<div class="why"><b>它为什么不拥挤：</b>'+whyText(t)+'</div>';
+    const src=[];
+    if(t.luckHits.length) src.push('命中 L3 加权号码：'+t.luckHits.join(' '));
+    else src.push('未命中 L3 加权号码（L 层对第 '+(i+1)+' 注无影响）');
+    h+='<div class="src">种子 '+seedStr+' ｜ '+src.join(' ｜ ')+'</div>';
+    h+='</div>';
+  });
+  $('#out').innerHTML=h;
+  const cb=$('#copyBtn');
+  if(cb) cb.onclick=function(){
+    const old='复制这 '+tickets.length+' 注';
+    copyText(ticketsText(tickets,g),function(ok){
+      const m=$('#copyMsg');
+      if(m) m.textContent = ok?'已复制 · 直接粘到投注站或手机备忘录':'复制被浏览器拦截，请手动选中号码';
+      cb.textContent = ok?'已复制 ✓':old;
+      cb.className = 'mini'+(ok?' ok':'');
+      if(ok) setTimeout(function(){ cb.textContent=old; cb.className='mini'; if(m) m.textContent=''; },1800);
+    });
+  };
+}
+function whyText(t){
+  const w=t.why||[];
+  const good=[];
+  if(w.indexOf('全部落在 1-31')<0) good.push('跳出 1-31 生日号区');
+  if(w.indexOf('含 1 组二连')<0) good.push('完全无连号');
+  else good.push('仅 1 组二连，无三连');
+  if(!w.some(function(x){return x.indexOf('同尾')>=0;})) good.push('无同尾堆叠');
+  if(!w.some(function(x){return x.indexOf('撞热号池')>=0;})) good.push('不含热号池号码');
+  if(!w.some(function(x){return x.indexOf('与上期重复')>=0;})) good.push('与上期无重复');
+  if(t.zc.every(function(c){return c>0;})) good.push('三个区间都有号（'+t.zc.join('/')+'）');
+  if(!w.some(function(x){return x.indexOf('谐音吉利')>=0;})) good.push('未堆砌 6/8/9 吉利数');
+  return good.slice(0,4).join('、')+'。';
+}
+
+/* ---------- 渲染底盘 ---------- */
+function renderBase(count,g,budget,spent,loss){
+  budget=Number(budget)||0; spent=Number(spent)||0; loss=Number(loss)||0;
+  const cost=count*g.price, left=budget-spent;
+  const chips=[];
+  chips.push({t:'本期成本 '+cost+' 元（'+count+' 注 × '+g.price+' 元）',c:cost<=left?'ok':'warn'});
+  chips.push({t:'本周剩余 '+(left-cost)+' 元 / 预算 '+budget+' 元',c:left-cost>=0?'ok':'bad'});
+  if(left-cost<0) chips.push({t:'超出周预算上限，本期不应出票',c:'bad'});
+  chips.push({t:loss>=3?('连黑 '+loss+' 期 · 触发冷却，建议停一期'):('连黑 '+loss+' 期 · 正常'),c:loss>=3?'warn':'ok'});
+  chips.push({t:'小额中奖处置：中奖即提现，不复投',c:'ok'});
+  chips.push({t:'本期公益金估算 '+ (cost*g.welfare).toFixed(2) +' 元',c:'ok'});
+  $('#basecheck').innerHTML=chips.map(function(x){return '<span class="chip '+x.c+'">'+x.t+'</span>';}).join('');
+  $('#welfBar').style.width=Math.min(100,budget?((spent+cost)/budget*100):0)+'%';
+  $('#welfTxt').textContent=(spent+cost)+' / '+budget+' 元 · 公益金约 '+(cost*g.welfare).toFixed(2)+' 元（按 '+(g.welfare*100).toFixed(0)+'% 计）';
+}
+
+/* =========================================================
+   事件
+   ========================================================= */
+$$('#gameSeg button').forEach(function(b){
+  b.onclick=function(){
+    $$('#gameSeg button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    GAME=GAMES[b.dataset.g];
+    $('#step2').hidden=true; $('#step3').hidden=true;
+    $('#pipe').innerHTML='<div class="placeholder" style="padding:30px 20px">等待生成</div>';
+    $('#out').innerHTML='<div class="placeholder"><div class="big">○</div>等待确认</div>';
+    RES=null;
+    renderAgeBar();
+  };
+});
+
+$('#today').onclick=function(){
+  const d=new Date();
+  $('#pickDate').value=fmtDate(d);
+  $('#resolve').click();
+};
+
+$('#resolve').onclick=function(){
+  const ds=$('#pickDate').value;
+  if(!ds){
+    $('#step2').hidden=false;
+    $('#sumWrap').innerHTML='<div class="err">还没选日期。先在上面选一个要选号的日子（默认是今天）。</div>';
+    $('#step2hint').textContent='';
+    $('#step3').hidden=true;
+    return;
+  }
+  const btn=$('#resolve');
+  btn.disabled=true; const old=btn.textContent; btn.textContent='解析中…';
+  setTimeout(function(){
+    try{
+      RES=resolveDate(ds,GAME);
+      renderSummary(RES);
+    }catch(e){
+      $('#step2').hidden=false;
+      $('#step3').hidden=true;              // 解析失败就别留着上一期的结果
+      $('#sumWrap').innerHTML='<div class="err">解析失败：'+(e&&e.message?e.message:e)
+        +'<br>可能原因：该日期早于内置数据起点，或晚于最新一期超过 1 期。</div>';
+      $('#step2hint').textContent='';
+    }
+    btn.disabled=false; btn.textContent=old;
+  },30);
+};
+
+$('#generate').onclick=function(){
+  if(!RES) return;
+  const btn=this;
+  btn.disabled=true; const old=btn.textContent; btn.textContent='计算中 · 采样候选池…';
+  setTimeout(function(){
+    try{ generate(); }
+    catch(e){ $('#out').innerHTML='<div class="err">运行出错：'+(e&&e.message?e.message:e)+'</div>'; }
+    btn.disabled=false; btn.textContent=old;
+    $('#step3').scrollIntoView({behavior:'smooth',block:'start'});
+  },30);
+};
+
+$('#syncData').onclick=async function(){
+  const btn=this, msg=$('#syncMsg');
+  if(btn.disabled) return;
+  btn.disabled=true; const old=btn.textContent; btn.textContent='更新中…';
+  LIVE_STATE='loading'; renderAgeBar();
+  if(msg) msg.textContent='';
+  const n=await loadLive(true);
+  btn.disabled=false; btn.textContent=old;
+  if(msg){
+    if(n){
+      const t=new Date();
+      msg.textContent='已取到最新开奖（'+fmtDate(t)+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+'）'
+        +(RES?'　数据变了，建议重新点「解析这一期」':'');
+    }else{
+      msg.textContent='更新失败：本地服务没响应或网络不通，继续用当前数据';
+    }
+  }
+};
+
+/* ---------- init ---------- */
+$('#pickDate').value=fmtDate(new Date());
+if(IS_HTTP){
+  // 经本地服务打开：先把按钮放出来，然后立刻去取实时数据
+  // （静态托管没有后端，「更新开奖数据」按钮没意义，不显示）
+  if(IS_LOCAL) $('#syncData').hidden=false;
+  LIVE_STATE='loading';
+  renderAgeBar();
+  renderMobile();
+  loadLive(false);
+}else{
+  renderMobile();
+}
+renderAgeBar();
+</script>
+</body>
+</html>

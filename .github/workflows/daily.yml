@@ -1,0 +1,63 @@
+name: 每日更新开奖数据并重建页面
+
+# 这套流程的价值：让 GitHub Pages 上那份静态页面自己保持新鲜，
+# 手机端因此可以"永久使用"，不需要用户开电脑。
+#
+# 每步失败都会让整次运行变红（GitHub 会给仓库 owner 发邮件），
+# 这是刻意的——静默失败比失败更坏。
+
+on:
+  schedule:
+    # 22:30 北京时间 = 14:30 UTC。
+    # 双色球 21:15 / 大乐透 21:25 开奖，公告数据 22:00 前入库，留 30 分钟缓冲。
+    - cron: '30 14 * * *'
+  # 也允许在 Actions 页面手动点一次（改完代码想立刻生效时用）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# 不并发跑两次，避免两个 job 同时 push 打架
+concurrency:
+  group: daily-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 准备 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 抓取：任一源失败会保留原文件原样不动（避免写入残缺数据）。
+      # 两源全失败时脚本自己退出码 1。
+      - name: 拉取最新开奖数据
+        run: node .workbuddy/fetch_data.js
+
+      # 关键门禁：抓取"一直失败但一路绿灯"是最坏的结果，数据会悄悄变旧。
+      # 这里卡一道，超过 4 天没更新就让运行变红。
+      - name: 数据新鲜度门禁
+        run: node .workbuddy/check_fresh.js 4
+
+      - name: 重建页面（根目录 HTML + docs/ 发布目录）
+        run: node .workbuddy/build.js
+
+      - name: 全量自测（必须通过，否则不部署）
+        run: node .workbuddy/selftest.js
+
+      - name: 提交变更（数据没变就不提交）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "数据与产物都没有变化，跳过提交。"
+          else
+            git commit -m "chore(data): 自动更新开奖数据 $(date -u '+%Y-%m-%d')"
+            git push
+          fi
