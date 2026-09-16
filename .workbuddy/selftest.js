@@ -61,7 +61,12 @@ const wrapper = stub + '\n' + js +
   '\n; return {els:__els, resolveDate:resolveDate, GAMES:GAMES, DATA:DATA, CAL:CAL, generate:generate,' +
   ' ticketsText:ticketsText, extraCover:extraCover, luckSet:luckSet, lsData:__lsData,' +
   ' renderMobile:renderMobile, LIVE_LAN:LIVE_LAN, applyLive:applyLive, IS_HTTP:IS_HTTP,' +
-  ' setGame:function(g){GAME=g;}, getGame:function(){return GAME;}, setRES:function(v){RES=v;}};';
+  ' setGame:function(g){GAME=g;}, getGame:function(){return GAME;}, setRES:function(v){RES=v;},' +
+  ' PRIZE:PRIZE, LEVEL_CN:LEVEL_CN, judgeTicket:judgeTicket, parseTicketLine:parseTicketLine,' +
+  ' verifyBatch:verifyBatch, renderVerify:renderVerify, renderDrawBar:renderDrawBar,' +
+  ' archInit:archInit, archCodes:archCodes, syncDraws:syncDraws, settleLedger:settleLedger,' +
+  ' ledgerAdd:ledgerAdd, ledgerAddFromVerify:ledgerAddFromVerify, ledgerTotals:ledgerTotals,' +
+  ' ledgerCSV:ledgerCSV, archiveJSON:archiveJSON, renderArchive:renderArchive, ARCH_KEY:ARCH_KEY};';
 
 let api;
 try { api = new Function(wrapper)(); console.log('[2] 整页脚本加载执行: 通过'); }
@@ -518,6 +523,271 @@ console.log('    E5 奖池   : ' + R3.e5note);
     ' | 图标 ' + (iconOk ? iconMsg + ' ✓' : '✗') +
     ' | 对外监听+路由 ' + (routeOk ? '✓' : '✗') +
     ' | 三种环境 ' + (mobFile && mobLan && mobSafe && mobStatic ? 'file/局域网/公网 ✓' : '✗'));
+
+  /* ---------- [24] 核验台：奖级判定 ----------
+     奖级表是硬编码的官方规则，边界最容易写错的地方正是最值钱的地方：
+     双色球「只要蓝球中就必有奖」（0+1 也是六等奖）、大乐透九等奖包含「只中一个后区」。
+     这里把两彩种每一级的边界都过一遍，外加「一等奖 0 注时不能编金额」。 */
+  let prizeOk = false, prizeMsg = '';
+  try {
+    const cnt = {ok:0, bad:[]};
+    const chk = function(desc, got, want){
+      if(got === want) cnt.ok++;
+      else cnt.bad.push(desc + ' 期望 ' + want + ' 实得 ' + got);
+    };
+    const ssqDraw = {code:'2026107', date:'2026-09-15', reds:[1,2,3,4,5,6], extra:[1], firstCnt:9, firstAmt:6900000};
+    const S = [   // [红球, 蓝球, 期望奖级, 期望金额, 是否浮动]
+      [[1,2,3,4,5,6],[1],    '一', 6900000, false],
+      [[1,2,3,4,5,6],[7],    '二', 0,       true ],   // 6+0 是浮动奖，库里没金额
+      [[1,2,3,4,5,10],[1],   '三', 3000,    false],
+      [[1,2,3,4,5,10],[7],   '四', 200,     false],   // 5+0
+      [[1,2,3,4,10,11],[1],  '四', 200,     false],   // 4+1
+      [[1,2,3,4,10,11],[7],  '五', 10,      false],   // 4+0
+      [[1,2,3,10,11,12],[1], '五', 10,      false],   // 3+1
+      [[1,2,10,11,12,13],[1],'六', 5,       false],   // 2+1
+      [[1,10,11,12,13,14],[1],'六',5,       false],   // 1+1
+      [[10,11,12,13,14,15],[1],'六',5,      false],   // 0+1 —— 中蓝球即有奖
+      [[1,2,3,10,11,12],[7], null, 0,       false],
+      [[1,10,11,12,13,14],[7],null,0,       false]
+    ];
+    S.forEach(function(c){
+      const j = api.judgeTicket(c[0], c[1], ssqDraw, api.GAMES.ssq);
+      chk('双色球 '+c[2]+' 级判定', j.level, c[2]);
+      chk('双色球 '+c[2]+' 金额', j.amt, c[3]);
+      chk('双色球 '+c[2]+' 浮动标记', !!j.float, !!c[4]);
+    });
+
+    const dltDraw = {code:'26105', date:'2026-09-14', reds:[1,2,3,4,5], extra:[1,2], firstCnt:3, firstAmt:10000000};
+    const D = [   // [前区, 后区, 期望奖级, 期望金额]
+      [[1,2,3,4,5],[1,2],      '一', 10000000],
+      [[1,2,3,4,5],[1,7],      '二', 0],
+      [[1,2,3,4,5],[7,8],      '三', 10000],
+      [[1,2,3,4,10],[1,2],     '四', 3000],
+      [[1,2,3,4,10],[1,7],     '五', 300],
+      [[1,2,3,10,11],[1,2],    '六', 200],
+      [[1,2,3,4,10],[7,8],     '七', 100],
+      [[1,2,3,10,11],[1,7],    '八', 15],    // 3+1
+      [[1,2,10,11,12],[1,2],   '八', 15],    // 2+2
+      [[1,2,3,10,11],[7,8],    '九', 5],     // 3+0
+      [[1,10,11,12,13],[1,2],  '九', 5],     // 1+2
+      [[1,2,10,11,12],[1,7],   '九', 5],     // 2+1
+      [[10,11,12,13,14],[1,2], '九', 5],     // 0+2 —— 只中两个后区也算九等奖
+      [[1,2,10,11,12],[7,8],   null, 0]
+    ];
+    D.forEach(function(c){
+      const j = api.judgeTicket(c[0], c[1], dltDraw, api.GAMES.dlt);
+      chk('大乐透 '+c[2]+' 级判定', j.level, c[2]);
+      chk('大乐透 '+c[2]+' 金额', j.amt, c[3]);
+    });
+
+    // 一等奖 0 注（当期没人中）时 firstAmt=0，不能拿 0 当金额糊过去，要标成待查
+    const jz = api.judgeTicket([1,2,3,4,5,6],[1],
+      {code:'2026099', date:'2026-09-01', reds:[1,2,3,4,5,6], extra:[1], firstCnt:0, firstAmt:0}, api.GAMES.ssq);
+    chk('一等奖 0 注时不编金额', jz.amt, 0);
+    chk('一等奖 0 注时标待查', !!jz.float, true);
+
+    prizeOk = cnt.bad.length === 0;
+    prizeMsg = cnt.ok + ' 项断言';
+    cnt.bad.slice(0, 6).forEach(function(x){ FAIL.push('奖级判定: ' + x); });
+  } catch (e) { FAIL.push('核验台奖级自测异常: ' + e.message); }
+  console.log('[24] 核验台奖级: ' + (prizeOk ? prizeMsg + ' 全对 ✓' : '有错 ✗'));
+
+  /* ---------- [25] 注单解析 + 核验汇总 ---------- */
+  let parseOk = false, parseMsg = '';
+  try {
+    const cnt = {ok:0, bad:[]};
+    const chk = function(desc, got, want){
+      if(String(got) === String(want)) cnt.ok++;
+      else cnt.bad.push(desc + ' 期望 ' + want + ' 实得 ' + got);
+    };
+    const pad = function(x){ return String(x).padStart(2,'0'); };
+    const G = api.GAMES.ssq;
+
+    chk('行首期号', api.parseTicketLine('2026108 03 08 16 21 27 31 + 11', G, '').code, '2026108');
+    chk('「第N注」前缀不当期号', api.parseTicketLine('第1注  03 08 16 21 27 31  +  11', G, '2026108').code, '2026108');
+    chk('不写 + 时按个数从尾部切', api.parseTicketLine('03 08 16 21 27 31 11', G, '').extra.join(','), '11');
+    chk('日期形式换算成期号', api.parseTicketLine('2026-09-15 07 11 18 20 27 29 + 11', G, '').code, '2026107');
+    const lianxie = api.parseTicketLine('03081621273111', G, '');
+    chk('14 位连写不误判成期号', (lianxie && lianxie.err) ? 'err' : 'not-err', 'err');
+    chk('超范围号被丢掉后仍成注', api.parseTicketLine('03 08 16 21 27 31 99 + 11', G, '').nums.length, 6);
+    const badN = api.parseTicketLine('03 08 16 + 11', G, '');
+    chk('号码个数不对要报错', (badN && badN.err) ? 'err' : 'not-err', 'err');
+
+    // 整段核验：用库里真实的 2026107 期反推用例，不写死号码
+    const s7 = api.DATA.ssq.filter(function(r){ return r.code === '2026107'; })[0];
+    chk('2026107 在库内', !!s7, 'true');
+    const blue = s7.extra[0];
+    const notBlue = blue === 1 ? 2 : 1;
+    const others = [];
+    for(let x=1; x<=33 && others.length<6; x++) if(s7.reds.indexOf(x)<0) others.push(x);
+    const text = [
+      s7.code + ' ' + s7.reds.join(' ') + ' + ' + pad(notBlue),                                    // 6+0 → 二等
+      s7.code + ' ' + s7.reds.slice(0,5).concat([others[0]]).join(' ') + ' + ' + pad(blue),         // 5+1 → 三等 3000
+      s7.code + ' ' + others.join(' ') + ' + ' + pad(blue),                                         // 0+1 → 六等 5
+      '2099101 01 02 03 04 05 06 + 11'                                                              // 库外期号
+    ].join('\n');
+    const v = api.verifyBatch('ssq', text, '');
+    chk('核验注数', v.n, 3);
+    chk('投入 3 注 ×2 元', v.cost, 6);
+    chk('中奖合计（0+3000+5）', v.win, 3005);
+    chk('净盈亏', v.net, 2999);
+    chk('中奖注数', v.hits, 3);
+    chk('浮动奖计数（只有一等奖例外时才算）', v.floatN, 1);
+    chk('库外期号进 bad', v.bad.length, 1);
+    chk('bad 里点名了期号', /2099101/.test(v.bad[0] ? v.bad[0].why : ''), 'true');
+    chk('一等奖在库时用真实单注金额',
+      api.verifyBatch('ssq', s7.code + ' ' + s7.reds.join(' ') + ' + ' + pad(blue), '').win, s7.firstAmt);
+
+    // 大乐透整条链也要能跑（号码同样从库里反推）
+    const dl = api.DATA.dlt[0];
+    const vd = api.verifyBatch('dlt', dl.code + ' ' + dl.reds.join(' ') + ' + ' + dl.extra.join(' '), '');
+    chk('大乐透核验注数', vd.n, 1);
+    chk('大乐透一等奖命中', vd.rows[0] ? vd.rows[0].level : 'x', '一');
+    chk('大乐透一等奖金额=库内单注', vd.win, dl.firstAmt || 0);
+
+    parseOk = cnt.bad.length === 0;
+    parseMsg = cnt.ok + ' 项断言';
+    cnt.bad.slice(0, 6).forEach(function(x){ FAIL.push('注单解析/核验: ' + x); });
+  } catch (e) { FAIL.push('注单解析自测异常: ' + e.message); }
+  console.log('[25] 注单解析与核验: ' + (parseOk ? parseMsg + ' 全对 ✓' : '有错 ✗'));
+
+  /* ---------- [26] 档案：开奖历史库自动入库 + 下注总账 ---------- */
+  let archOk = false, archMsg = '';
+  try {
+    const cnt = {ok:0, bad:[]};
+    const chk = function(desc, got, want){
+      if(String(got) === String(want)) cnt.ok++;
+      else cnt.bad.push(desc + ' 期望 ' + want + ' 实得 ' + got);
+    };
+    delete api.lsData[api.ARCH_KEY];           // 从干净状态开始
+
+    const a1 = api.syncDraws();
+    chk('首次入库 双色球', a1.ssq, 200);
+    chk('首次入库 大乐透', a1.dlt, 255);
+    // 入库结果必须落盘，不能只活在运行时变量里 —— 否则档案区一旦重渲染，提示就没了
+    chk('入库结果写进档案', (api.archInit().lastSync||{}).ssq, 200);
+    const a2 = api.syncDraws();
+    chk('再入库不重复计数', a2.ssq + a2.dlt, 0);
+    chk('无新增时如实归零（不谎报）', (api.archInit().lastSync||{}).ssq, 0);
+    chk('库内总数稳定', a2.total, 455);
+    chk('按期号去重（无重复键）', api.archCodes('ssq').length, 200);
+    chk('能取到最老那一期', api.archCodes('ssq')[0], '2025059');
+
+    // 记一笔：一注中蓝球（0+1 → 六等奖 5 元）+ 一注不中。
+    // 号码一律从库里那一期的真实开奖号码反推，不写死 —— 写死就是在测试自己的假设。
+    const s7b = api.DATA.ssq.filter(function(r){ return r.code === '2026107'; })[0];
+    const offRed = [];
+    for(let x=1; x<=33 && offRed.length<6; x++) if(s7b.reds.indexOf(x)<0) offRed.push(x);
+    const offRed2 = [];   // 第二组也不在开奖号里，用来测「不同的注要加进去，相同的注不能重复加」
+    for(let x=1; x<=33 && offRed2.length<6; x++) if(s7b.reds.indexOf(x)<0 && offRed.indexOf(x)<0) offRed2.push(x);
+    const blue7 = s7b.extra[0];
+    const notBlue7 = blue7 === 1 ? 2 : 1;
+    chk('并入注数', api.ledgerAdd('ssq', '2026107', [
+      {nums:offRed, extra:[blue7]},        // 0 红 + 中蓝 → 六等奖 5 元
+      {nums:offRed, extra:[notBlue7]}      // 0 红 + 不中蓝 → 无奖
+    ]), 2);
+    chk('总账条目数', api.archInit().ledger.length, 1);
+
+    // 同一注再记一遍必须什么都没发生（点两下按钮 / 同一批核验两遍的真实现场）
+    chk('同一注重复记账返回 0', api.ledgerAdd('ssq','2026107',[{nums:offRed, extra:[notBlue7]}]), 0);
+    chk('同一注重复记账不长行', api.archInit().ledger.length, 1);
+    chk('同一注重复记账不算注数', api.archInit().ledger[0].n, 2);
+    // 但补一注**新的**要能加进同一行，不能因为"同期已存在"就被丢掉
+    chk('补新注会合进同一行', api.ledgerAdd('ssq','2026107',[{nums:offRed2, extra:[blue7]}]), 1);
+    chk('同期同彩种仍然只有一行', api.archInit().ledger.length, 1);
+
+    api.settleLedger();
+    const e0 = api.archInit().ledger[0];
+    chk('已开奖期自动结算', e0.status, 'checked');
+    chk('注数合并后 3 注', e0.n, 3);
+    chk('成本 3×2=6 元', e0.cost, 6);
+    chk('奖金 5+5=10 元', e0.win, 10);
+    chk('中奖明细与中奖注数一致', (e0.detail||[]).length, 2);
+
+    // 期号还没开奖 → 必须留在待开奖，不能瞎结算
+    api.ledgerAdd('ssq', '2099101', [{nums:[1,2,3,4,5,6], extra:[1]}]);
+    api.settleLedger();
+    const pend = api.archInit().ledger.filter(function(x){ return x.code === '2099101'; })[0];
+    chk('未开奖期保持待开奖', pend.status, 'pending');
+    chk('未开奖期奖金为 0', pend.win, 0);
+
+    const t = api.ledgerTotals(api.archInit().ledger);
+    chk('汇总 · 记录期数', t.rows, 2);
+    chk('汇总 · 待开奖', t.pending, 1);
+    chk('汇总 · 已结算', t.checked, 1);
+    chk('汇总 · 总投入', t.cost, 8);
+    chk('汇总 · 总奖金', t.win, 10);
+    chk('汇总 · 净盈亏', t.net, 2);
+    chk('汇总 · 回报率', t.rate.toFixed(1), '25.0');
+
+    const csv = api.ledgerCSV();
+    chk('CSV 带 BOM（Excel 不乱码）', csv.charCodeAt(0), 65279);
+    chk('CSV 行数 = 表头 + 条目', csv.split('\r\n').length, 3);
+    const archObj = JSON.parse(api.archiveJSON());
+    chk('JSON 含 draws', typeof archObj.draws, 'object');
+    chk('JSON 含 ledger', Array.isArray(archObj.ledger), 'true');
+    chk('draws 里存的是可还原的原始行', /^2026107\|2026-09-15\|/.test(archObj.draws.ssq['2026107']||''), 'true');
+
+    // localStorage 不可用（file:// 直开 / 隐私模式）时必须降级，不能抛异常。
+    // 做法是在桩后面补一句把它置空，再跑一遍整页脚本。
+    // 注意别把这里的局部变量叫 js —— 会遮蔽外层的页面脚本源码（踩过：
+    // stub + [object Object] 拼出来的报错是「Unexpected identifier 'Object'」，完全指不到病因）。
+    let noLs = '未跑';
+    // 桩是共享全局：跑完把 document / localStorage 还原，别让「已被置空的世界」漏给后面的用例
+    const keepDoc = globalThis.document, keepLs = globalThis.localStorage;
+    const NOLS_SRC = stub + 'globalThis.localStorage = null;\n' + js;
+    try {
+      const apiNL = new Function(NOLS_SRC +
+        '\n; return {LS:LS, syncDraws:syncDraws, ledgerAdd:ledgerAdd, ledgerTotals:ledgerTotals,' +
+        ' archCodes:archCodes, renderArchive:renderArchive, els:__els};')();
+      const okNL = apiNL.LS === null
+        && apiNL.syncDraws().total === 0
+        && apiNL.syncDraws().ssq === 0                 // 不能谎报入库条数
+        && apiNL.ledgerAdd('ssq','2026107',[{nums:[1,2,3,4,5,6],extra:[1]}]) === 0
+        && apiNL.ledgerTotals([]).cost === 0
+        && apiNL.archCodes('ssq').length === 0
+        && String(apiNL.els.archBody.innerHTML).indexOf('不允许') >= 0;
+      noLs = okNL ? 'ok' : '降级行为不对';
+    } catch (e) { noLs = '抛异常: ' + e.message; }
+    chk('无 localStorage 时降级不报错', noLs, 'ok');
+
+    globalThis.document = keepDoc; globalThis.localStorage = keepLs;
+
+    // 手机端总账走卡片、宽屏走表格，两边都渲染好靠 CSS 媒体查询切。
+    // 少了任何一边都不会报错，只会在某一端变得难用 —— 所以这里把两边都钉住。
+    //
+    // ★关键：桩是共享全局，每次 new Function(stub+js) 都会重写 globalThis.document，
+    //   而页面里的函数是**调用时**才去取 document。所以拿早先那个 api 的 els 断言渲染结果必然落空
+    //   —— 那份 __els 早不是当前 document 指向的对象了（踩过：读到 0/0，看着像渲染没输出，
+    //   其实结果被写进了别的 api 的桩里）。这里现建一个 api、预置一条总账，用它自己的 els 读 DOM。
+    const SEED = stub
+      + '__lsData["wish-algo-archive-1"]=JSON.stringify({seq:1,draws:{ssq:{},dlt:{}},ledger:['
+      + '{game:"ssq",code:"2026107",date:"2026-09-15",n:3,cost:6,win:5,status:"checked",'
+      + 'tickets:[{nums:[1,2,3,4,5,6],extra:[7]}],detail:[{level:6,amt:5}],ts:1}]});\n'
+      + js;
+    const apiR = new Function(SEED +
+      '\n; return {renderArchive:renderArchive, archInit:archInit, els:__els};')();
+    apiR.renderArchive();
+    const archHtml = String(apiR.els.archBody.innerHTML);
+    const ledRows = apiR.archInit().ledger.length;
+    chk('预置总账 = 1 期（渲染断言的前提）', ledRows, 1);
+    chk('总账同时渲染宽表与手机卡片',
+      (archHtml.indexOf('<table class="led"') >= 0 ? '1' : '0') + '/' +
+      (archHtml.indexOf('class="ledcards"') >= 0 ? '1' : '0'), '1/1');
+    chk('CSS 里有手机端切换规则',
+      /\.ledwrap\{display:none\}\s*\.ledcards\{display:block\}/.test(html.replace(/\s+/g, ' ')) ? '1' : '0', '1');
+    chk('手机卡片数 = 总账期数', (archHtml.match(/class="lnums"/g)||[]).length, ledRows);
+    chk('手机卡片四项俱全（注数/投入/中奖/盈亏）',
+      ['注数','投入','中奖','盈亏'].every(function(k){ return archHtml.indexOf('<i>'+k+'</i>') >= 0; }) ? '1' : '0', '1');
+    chk('宽表表头 9 列', (archHtml.match(/<th>/g)||[]).length, 9);
+    chk('档案界面显示最近入库期数', archHtml.indexOf('最近一次入库')>=0 ? '1':'0', '1');
+    chk('旧运行时变量已彻底移除', js.indexOf('SYNC_LAST')>=0 ? 'still-there':'gone', 'gone');
+
+    archOk = cnt.bad.length === 0;
+    archMsg = cnt.ok + ' 项断言';
+    cnt.bad.slice(0, 6).forEach(function(x){ FAIL.push('档案: ' + x); });
+  } catch (e) { FAIL.push('档案自测异常: ' + e.message); }
+  console.log('[26] 档案总账与历史库: ' + (archOk ? archMsg + ' ✓' : '✗'));
 
   console.log('');
   if (FAIL.length) { console.log('结果: 失败'); FAIL.forEach(x => console.log('  - ' + x)); process.exit(1); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>许愿算法 1.0.1 · 反拥挤过滤器</title>
+<title>许愿算法 1.1.0 · 反拥挤过滤器</title>
 <!-- PWA：让手机「添加到主屏幕」后像个独立 App。
      全部用相对路径 —— 同一份产物要落在两种位置：本地服务在根目录 `/`，
      GitHub Pages 在子路径 `/<仓库>/`，写死 '/' 的话 Pages 上会 404。 -->
@@ -188,6 +188,64 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 @media(display-mode:standalone){
   header{padding-top:calc(18px + env(safe-area-inset-top,0px))}
 }
+
+/* ---------- STEP 4 核验台 ---------- */
+.drawbar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.drawcard{flex:1 1 300px;min-width:0;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fbfcfd}
+.drawcard .dh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.drawcard .dh b{font-size:13px}
+.drawcard .dh span{font-size:11.5px;color:var(--muted)}
+.ball.sm{width:29px;height:29px;font-size:12.5px}
+/* 命中的球套一圈绿环 —— ::after 而不是改 background，蓝球红球都能用同一套 */
+.ball.hit::after{content:'';position:absolute;inset:-3px;border:2px solid #16a34a;border-radius:50%}
+.vrow{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px}
+.vrow.win{border-color:#bfe6cb;background:var(--Obg)}
+.vrow.miss{border-color:#f4d7d7;background:#fdf7f7}
+.vrow .vh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.vrow .vh .no{font:700 11px ui-monospace,monospace;background:var(--ink);color:#fff;border-radius:5px;padding:2px 8px}
+.vrow .vh .sp{font-size:11.5px;color:var(--muted)}
+.vrow .vh .res{margin-left:auto;font-weight:800;font-size:12.5px;white-space:nowrap}
+.vrow.win .vh .res{color:#15803d}
+.vrow.miss .vh .res{color:#b91c1c}
+.vrow .balls{margin-bottom:8px}
+.vbad{border:1px solid #f4b4b4;background:#fdf7f7;border-radius:10px;padding:10px 13px;font-size:12.5px;color:#b91c1c;margin-top:10px}
+.vbad b{font-family:ui-monospace,monospace}
+
+/* ---------- STEP 5 档案 · 总账与开奖历史库 ---------- */
+.archsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:14px}
+.archsum .k{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfcfd;min-width:0}
+.archsum .k .l{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archsum .k .v{font:800 16px ui-monospace,Consolas,monospace;letter-spacing:-.3px;margin-top:3px;white-space:nowrap}
+.archsum .k.up .v{color:#15803d}
+.archsum .k.down .v{color:#b91c1c}
+.ledwrap{border:1px solid var(--line);border-radius:11px;overflow:auto;max-height:360px;margin-bottom:12px}
+table.led{width:100%;border-collapse:collapse;min-width:600px}
+table.led th{text-align:left;font:700 11px inherit;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--line);background:#f8fafc;white-space:nowrap}
+table.led td{padding:8px 12px;border-bottom:1px solid var(--line2);font-size:12.5px;white-space:nowrap}
+table.led td.n{text-align:right;font-family:ui-monospace,Consolas,monospace}
+table.led td.pos{color:#15803d;font-weight:700}
+table.led td.neg{color:#b91c1c}
+table.led tr:last-child td{border-bottom:0}
+.badge.b-pend{background:#fff8e6;border-color:#f5d18a;color:#a16207}
+.badge.b-done{background:var(--Obg);border-color:#bfe6cb;color:#15803d}
+/* 手机端的总账不说"能拖"，直接换成卡片。
+   9 列的表在 390px 上必然要横向拖，那是纸面上叫"能用"、实际没人愿意用的一种能用。
+   两边都渲染，由下面的媒体查询切换，省得在 JS 里判屏宽（还得监听 resize）。 */
+.ledcards{display:none}
+.lcard{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px;background:#fbfcfd}
+.lcard.win{border-color:#bfe6cb;background:var(--Obg)}
+.lcard .lh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.lcard .lh b{font:700 12.5px ui-monospace,Consolas,monospace}
+.lcard .lh span{font-size:11.5px;color:var(--muted)}
+.lcard .lh .badge{margin-left:auto}
+.lcard .lnums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px}
+.lcard .lnums span{font:700 13px ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;gap:8px;min-width:0}
+.lcard .lnums span i{font:600 11px inherit;color:var(--muted);font-style:normal;flex:0 0 auto}
+.lcard .lnums .pos{color:#15803d}
+.lcard .lnums .neg{color:#b91c1c}
+.lcard .ldet{margin-top:9px;padding-top:8px;border-top:1px solid var(--line2);font-size:12px;color:var(--ink2)}
+@media(max-width:680px){ .ledwrap{display:none} .ledcards{display:block} }
+
 [hidden]{display:none !important}
 </style>
 </head>
@@ -195,7 +253,7 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 
 <header>
   <div class="wrap">
-    <span class="tagline">许愿算法 1.0.1</span>
+    <span class="tagline">许愿算法 1.1.0</span>
     <h1>反拥挤<em>过滤器</em></h1>
     <p class="sub">不预测、不提高中奖概率。中奖概率恒定，能改变的只有「中奖后有多少人跟你一起分」。</p>
     <div class="disc">
@@ -261,10 +319,62 @@ body{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
   </section>
   </div>
 
+  <!-- ========== 第四步：核验台（事后比对） ========== -->
+  <section class="card sec-e" id="verifyCard">
+    <h2><span class="step">STEP 4</span><span class="dot" style="background:var(--E)"></span>核验台 · 开奖比对
+      <span class="hint">开奖后在这里对票，不用自己数中了几个</span></h2>
+    <div class="body">
+      <div class="drawbar" id="drawBar"></div>
+
+      <div class="row">
+        <div class="field" style="flex:1 1 100%">
+          <label>核验彩种</label>
+          <div class="seg" id="vGameSeg">
+            <button data-g="ssq" class="on">双色球（红 6 + 蓝 1）</button>
+            <button data-g="dlt">大乐透（前区 5 + 后区 2）</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="field" style="flex:0 1 200px">
+          <label>默认期号</label>
+          <input type="text" id="vCode" placeholder="如 2026108">
+          <div class="note">注单行里自带期号或日期时以行内为准；没写就用这个</div>
+        </div>
+        <div class="field" style="flex:1 1 340px">
+          <label>注单 · 每行一注</label>
+          <textarea id="vInput" placeholder="03 08 16 21 27 31 + 11&#10;2026109 01 09 15 22 28 33 + 06&#10;2026-09-20 02 11 14 23 29 33 + 08"></textarea>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary go" id="vRun" style="flex:1 1 auto">核验这些注单</button>
+        <button class="ghost" id="vPull">带入最近生成的注单</button>
+        <button class="ghost" id="vClear">清空</button>
+      </div>
+
+      <div id="vOut"></div>
+    </div>
+  </section>
+
+  <!-- ========== 第五步：档案（总账 + 开奖历史库） ========== -->
+  <section class="card sec-b" id="archiveCard">
+    <h2><span class="step">STEP 5</span><span class="dot" style="background:var(--B)"></span>档案 · 下注总账与开奖历史库
+      <span class="hint">只存在你这台设备上，不上传</span></h2>
+    <div class="body" id="archBody"></div>
+  </section>
+
   <div class="foot">
     <b>为什么这套东西不能提高中奖概率：</b>每一注号码被开出的概率完全相同。「过滤」只改变你选的号码落在人群中的位置，不改变它被抽中的位置。真正被改善的是<b>中奖后的分成</b>——浮动奖池按注数均分，避开大众组合可以在中奖时少分给几个人。这不是玄学，是算术；但它也只在极低概率事件真的发生时才有意义。<br>
     <b>数据来源：</b>双色球取中国福利彩票官网开奖公告接口；大乐透取 500 彩票网历史数据表。内置快照覆盖范围见页面顶部，超出范围的日期无法解析。<br>
     <b>自动填入的边界：</b>P/E/L 里凡是能从开奖数据算出来的都已自动填入；<b>E2 实时事件（热搜/赛事/明星）、E3 AI号与主播号、P4 你买过的号码</b>需要联网检索或属于你的私有信息，工具无法自动获取，留空即该层不生效——不编造数据。E4 区域扰动只作文字备忘，要影响拥挤度请填同一区域的「修正 %」。<br>
+    <b>1.1.0 加了两个模块：</b>
+    ① <b>核验台（STEP 4）</b>—— 开奖后不用自己数。把注单一行一注贴进去（行里可带期号或日期，也能一键带入刚生成的 5 注），逐注标出中了几个号、第几等奖、多少钱，命中的球会套上绿环。奖级按官方规则硬编码，双色球 6 级、大乐透 9 级。
+    金额口径分两种：固定奖用官方固定金额；<b>一等奖用库里抓到的当期真实单注金额</b>。二等奖的单注金额我们没抓（数据源只是没取那一列），所以明确写「金额待查、请查公告」，<b>不给估算值糊过去</b>。
+    ② <b>档案（STEP 5）</b>—— 两样东西。<b>下注总账</b>记录每期投入 / 中奖 / 盈亏 / 回报率 / 连续未中，开奖后自动结算；
+    <b>开奖历史库</b>则是为了解决内置快照的滚动窗口问题：快照固定 200 期，新的一期进来，最老的一期就被挤掉，半年前的号再也翻不到。本地库每次打开把当前数据按期号去重合并进去，只增不减。
+    两个模块的数据都只写在你本机浏览器里，可以导出 JSON 备份，也可以导出 CSV 用 Excel 看。<br>
     <b>1.0.1 修了三处：</b>
     ① <b>E1 层原本等于没开</b> —— 自动填进去的是「中秋节」这种名字，工具却拿它当号码去匹配，永远匹配不到任何号，权重 ×0.82 一次都没生效过。现在节日日期会先映射成号码（月 · 日 · 月+日，九一八 → 09/18）再降权。
     ② <b>5 注的蓝球/后区不再撞号</b> —— 单注概率一个字没变，变的是 5 注之间不再押同一个号：双色球「至少中一次六等奖」由 27.6% 变成 31.25%。蓝球是固定奖 5 元、不按注数均分，重复押号是纯浪费。
@@ -355,6 +465,14 @@ function applyLive(j){
   });
   if(hit){ LIVE_STATE = 'ok'; renderAgeBar(); }
   renderMobile();
+  // 实时数据一到，核验台与开奖历史库都要跟着刷新：
+  // 新一期开奖意味着「最新一期」变了，也意味着本地历史库该多一条。
+  if(hit){
+    renderDrawBar();
+    syncDraws();
+    settleLedger();
+    renderArchive();
+  }
   return hit;
 }
 async function loadLive(force){
@@ -667,6 +785,518 @@ function lsAll(){ try{ return LS?JSON.parse(LS.getItem(LS_KEY)||'{}'):{}; }catch
 function lsGet(k,d){ const o=lsAll(); return (o[k]===undefined||o[k]===null||o[k]==='')?d:o[k]; }
 function lsSetMany(obj){ try{ if(!LS) return; const o=lsAll(); for(const k in obj) o[k]=obj[k]; LS.setItem(LS_KEY,JSON.stringify(o)); }catch(e){} }
 
+const p2 = function(x){ return String(x).padStart(2,'0'); };
+
+/* =========================================================
+   核验台：奖级判定
+   ---------------------------------------------------------
+   这一层是纯算术 + 真实开奖数据，没有任何玄学：把开奖号码和你的号码逐位比对，
+   数出命中几个区内号、几个特别号，查官方奖级表。边界用例全部在自测里跑过。
+
+   金额口径（重要，别糊）：
+     · 固定奖（双色球三~六等 / 大乐透三~九等）→ 用官方固定金额。
+     · 浮动奖（两彩种的一、二等）→ **一等奖**用库里抓到的当期真实单注金额；
+       二等奖库里没有这一列（500 表格只取了奖池/一等奖注数/一等奖单注），
+       所以明确标成"金额待查、请查公告"，绝不用估算值糊过去。
+   ========================================================= */
+const PRIZE = {
+  ssq:{ name:'双色球', levels:[
+    {id:'一', f:function(r,e){ return r===6&&e===1; }, fixed:0,    float:true },
+    {id:'二', f:function(r,e){ return r===6&&e===0; }, fixed:0,    float:true },
+    {id:'三', f:function(r,e){ return r===5&&e===1; }, fixed:3000 },
+    {id:'四', f:function(r,e){ return (r===5&&e===0)||(r===4&&e===1); }, fixed:200 },
+    {id:'五', f:function(r,e){ return (r===4&&e===0)||(r===3&&e===1); }, fixed:10 },
+    {id:'六', f:function(r,e){ return e===1&&r<=2; },  fixed:5 }
+  ]},
+  dlt:{ name:'大乐透', levels:[
+    {id:'一', f:function(r,e){ return r===5&&e===2; }, fixed:0,     float:true },
+    {id:'二', f:function(r,e){ return r===5&&e===1; }, fixed:0,     float:true },
+    {id:'三', f:function(r,e){ return r===5&&e===0; }, fixed:10000 },
+    {id:'四', f:function(r,e){ return r===4&&e===2; }, fixed:3000 },
+    {id:'五', f:function(r,e){ return r===4&&e===1; }, fixed:300 },
+    {id:'六', f:function(r,e){ return r===3&&e===2; }, fixed:200 },
+    {id:'七', f:function(r,e){ return r===4&&e===0; }, fixed:100 },
+    {id:'八', f:function(r,e){ return (r===3&&e===1)||(r===2&&e===2); }, fixed:15 },
+    {id:'九', f:function(r,e){ return (r===3&&e===0)||(r===1&&e===2)||(r===2&&e===1)||(r===0&&e===2); }, fixed:5 }
+  ]}
+};
+const LEVEL_CN = {'一':'一等奖','二':'二等奖','三':'三等奖','四':'四等奖','五':'五等奖',
+                  '六':'六等奖','七':'七等奖','八':'八等奖','九':'九等奖'};
+
+function hitCount(nums, extra, draw){
+  const r=nums.filter(function(x){ return draw.reds.indexOf(x)>=0; }).length;
+  const e=extra.filter(function(x){ return draw.extra.indexOf(x)>=0; }).length;
+  return {r:r, e:e};
+}
+/* 单注 → 奖级。无奖返回 {level:null, amt:0} */
+function judgeTicket(nums, extra, draw, g){
+  const P=PRIZE[g.key];
+  if(!P) return {r:0, e:0, level:null, amt:0, note:''};
+  const h=hitCount(nums, extra, draw);
+  for(let i=0;i<P.levels.length;i++){
+    const L=P.levels[i];
+    if(!L.f(h.r, h.e)) continue;
+    if(!L.float) return {r:h.r, e:h.e, level:L.id, amt:L.fixed, note:'固定奖 · 官方规则 '+L.fixed+' 元'};
+    if(L.id==='一' && draw.firstAmt){
+      return {r:h.r, e:h.e, level:L.id, amt:draw.firstAmt,
+        note:'当期实际单注 '+(draw.firstAmt/10000).toFixed(1)+' 万（第 '+draw.code+' 期 · 一等奖 '+draw.firstCnt+' 注）'};
+    }
+    return {r:h.r, e:h.e, level:L.id, amt:0, float:true,
+      note:'浮动奖（奖池按注数均分）。这一级的单注金额没有入库，请查第 '+draw.code+' 期开奖公告，别按 0 当成没中'};
+  }
+  return {r:h.r, e:h.e, level:null, amt:0, note:''};
+}
+
+/* 宽松解析一行注单。容忍这几种写法：
+     2026108 03 08 16 21 27 31 + 11       期号在前
+     2026-09-17 03 08 16 21 27 31 + 11    日期在前
+     第1注  03 08 16 21 27 31  +  11      工具自己导出的格式（第N注前缀，期号走默认值）
+     03 08 16 21 27 31 11                 不写 '+'，按个数从尾部切（两彩种都是 7 个数）
+   期号白名单：7 位 20xxxxx 或 5 位 2/3 开头 —— 防止把「03081621273111」这种连写误当初期号。 */
+function parseTicketLine(line, g, defaultCode){
+  let rest = String(line==null ? '' : line).trim();
+  if(!rest) return null;
+  // 先剥掉「第1注」这类前缀。工具自己导出的就是这格式，不剥的话那个「1」
+  // 会被当成一个红球 —— 一注变 7 个号，永远解析失败。
+  rest = rest.replace(/^第\s*\d+\s*注\s*[:：]?/, '').replace(/^#\s*\d+\s*[:：]?/, '').trim();
+  if(!rest) return null;
+  let code='';
+  const dm = rest.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(dm){
+    const row = DATA[g.key].filter(function(r){ return r.date===dm[0]; })[0];
+    if(!row) return {err:'日期 '+dm[0]+' 不在开奖库内'};
+    code = row.code; rest = rest.slice(10);
+  }else{
+    const cm = rest.match(/^\D*?\b(20\d{5}|[23]\d{4})\b/);
+    if(cm){ code = cm[1]; rest = rest.slice(cm[0].length); }
+  }
+  let redsPart=rest, extraPart='', hasPlus=false;
+  const ix = rest.indexOf('+');
+  if(ix>=0){ hasPlus=true; redsPart=rest.slice(0,ix); extraPart=rest.slice(ix+1); }
+  const toNums = function(s, mn, mx){
+    return (String(s).match(/\d+/g)||[]).map(Number).filter(function(x){ return x>=mn && x<=mx; });
+  };
+  let reds = toNums(redsPart, g.reds.min, g.reds.max);
+  let extra = hasPlus ? toNums(extraPart, g.extra.min, g.extra.max) : [];
+  if(!hasPlus){
+    const all = (rest.match(/\d+/g)||[]).map(Number);
+    if(all.length === g.reds.n + g.extra.n){ reds = all.slice(0, g.reds.n); extra = all.slice(g.reds.n); }
+  }
+  const uniq = function(a){ return Array.from(new Set(a)).sort(function(x,y){ return x-y; }); };
+  reds = uniq(reds); extra = uniq(extra);
+  if(reds.length!==g.reds.n || extra.length!==g.extra.n)
+    return {err:'号码个数不对：'+g.name+' 要 '+g.reds.n+' 个区内号 + '+g.extra.n+' 个'+g.extra.label
+      +'，这行解析出 '+reds.length+'+'+extra.length+'（超出范围的号会被丢掉）'};
+  return {code:String(code||defaultCode||'').replace(/\D/g,''), nums:reds, extra:extra};
+}
+
+/* 批量核验：整段文本 → 逐注结果 + 汇总。纯函数，自测直接调。 */
+function verifyBatch(game, text, defaultCode){
+  const g = GAMES[game];
+  const rows = DATA[g.key] || [];
+  const out = {game:game, g:g, rows:[], bad:[], n:0, cost:0, win:0, net:0, hits:0, floatN:0, range:'', err:''};
+  if(!rows.length){ out.err='开奖数据未载入，无法核验。'; return out; }
+  out.range = rows[rows.length-1].code + ' → ' + rows[0].code;
+  String(text==null?'':text).split('\n').forEach(function(line, i){
+    if(!line.trim()) return;
+    const p = parseTicketLine(line, g, defaultCode);
+    if(!p) return;
+    const brief = line.trim().slice(0, 60);
+    if(p.err){ out.bad.push({line:i+1, text:brief, why:p.err}); return; }
+    if(!p.code){ out.bad.push({line:i+1, text:brief, why:'这行没写期号，上面也没填默认期号'}); return; }
+    const draw = findDraw(g.key, p.code);
+    if(!draw){
+      out.bad.push({line:i+1, text:brief,
+        why:'第 '+p.code+' 期在开奖库里找不到（当前快照覆盖 '+out.range+'，本地历史库也没有这一期）—— 期号写错了？'});
+      return;
+    }
+    const j = judgeTicket(p.nums, p.extra, draw, g);
+    out.rows.push({code:p.code, date:draw.date, nums:p.nums, extra:p.extra, draw:draw,
+      level:j.level, amt:j.amt, note:j.note, r:j.r, e:j.e, float:!!j.float});
+  });
+  out.n = out.rows.length;
+  out.cost = out.n * g.price;
+  out.win = out.rows.reduce(function(a,x){ return a + (x.amt||0); }, 0);
+  out.net = out.win - out.cost;
+  out.hits = out.rows.filter(function(x){ return !!x.level; }).length;
+  out.floatN = out.rows.filter(function(x){ return x.float; }).length;
+  return out;
+}
+
+/* =========================================================
+   档案：下注总账 + 开奖历史库
+   ---------------------------------------------------------
+   开奖历史库为什么有必要：内置快照是**滚动窗口**（双色球固定 200 期，
+   新的一期进来，最老的一期就被挤掉）。想回看半年前的号就没得看了。
+   这里每次打开都把当前数据 merge 进本地库，按期号去重、只增不减，
+   攒着攒着就成一份完整历史。
+   体积：一行约 55 字节，五年两个彩种合计约 90KB，localStorage 装得下（上限 5MB）。
+   单独一个 key（不复用 LS_KEY）：draws 会越长越大，混进原来的扁平小对象里，
+   会让每次 lsAll() 的 JSON.parse 都白白变慢。
+   ========================================================= */
+const ARCH_KEY = 'wish-algo-archive-1';
+
+function archLoad(){
+  if(!LS) return null;
+  try{ const s = LS.getItem(ARCH_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; }
+}
+function archInit(){
+  const o = archLoad() || {};
+  if(!o.draws || typeof o.draws!=='object') o.draws = {};
+  if(!o.draws.ssq || typeof o.draws.ssq!=='object') o.draws.ssq = {};
+  if(!o.draws.dlt || typeof o.draws.dlt!=='object') o.draws.dlt = {};
+  if(!Array.isArray(o.ledger)) o.ledger = [];
+  if(!o.seq) o.seq = 0;
+  return o;
+}
+function archSave(o){ if(!LS) return false; try{ LS.setItem(ARCH_KEY, JSON.stringify(o)); return true; }catch(e){ return false; } }
+function rowToLine(r){
+  return [r.code, r.date, r.reds.map(p2).join(','), r.extra.map(p2).join(','),
+          r.pool||0, r.firstCnt||0, r.firstAmt||0].join('|');
+}
+/* 自动入库：把当前 DATA 全量 merge 进本地库，返回本次新增条数 */
+function syncDraws(){
+  // 没有本地存储时直接报 0 —— 否则上面算出 200/255 却根本没存进去，是谎报
+  if(!LS) return {ssq:0, dlt:0, total:0};
+  const o = archInit(); let a=0, b=0;
+  ['ssq','dlt'].forEach(function(k){
+    (DATA[k]||[]).forEach(function(r){
+      if(!r || !r.code) return;
+      if(o.draws[k][r.code]) return;
+      o.draws[k][r.code] = rowToLine(r);
+      if(k==='ssq') a++; else b++;
+    });
+  });
+  o.drawsAt = new Date().toISOString();
+  // 入库结果写进档案本身，而不是只放在运行时变量里：
+  // 档案区每次重渲染（记账/核验/结算都会触发）都要能如实说出「最近入库了多少期」，
+  // 挂在运行时变量上的话，任何一次重渲染都可能把它冲掉 —— 提示凭空消失比不提示更坏。
+  o.lastSync = {ssq:a, dlt:b, at:o.drawsAt};
+  archSave(o);
+  return {ssq:a, dlt:b, total:Object.keys(o.draws.ssq).length + Object.keys(o.draws.dlt).length};
+}
+function archCodes(k){ const o = archInit(); return Object.keys(o.draws[k]||{}).sort(); }
+
+/* 总账汇总 */
+function ledgerTotals(led){
+  const t = {rows:led.length, n:0, cost:0, win:0, net:0, rate:0, pending:0, checked:0, streak:0};
+  led.forEach(function(e){
+    t.n += (e.n||0); t.cost += (e.cost||0); t.win += (e.win||0);
+    if(e.status==='pending') t.pending++; else t.checked++;
+  });
+  t.net = t.win - t.cost;
+  t.rate = t.cost ? (t.net/t.cost*100) : 0;
+  // 连续未中奖：按期号倒序数，数到第一个有奖金的为止（待开奖的不计入连续）
+  const sorted = led.slice().sort(function(a,b){ return b.code>a.code ? 1 : b.code<a.code ? -1 : 0; });
+  for(let i=0;i<sorted.length;i++){
+    if((sorted[i].win||0) > 0) break;
+    if(sorted[i].status==='checked') t.streak++;
+  }
+  return t;
+}
+/* 自动结算：**幂等重算**，不是"只处理 pending"。
+   为什么必须重算而不是只算一次：同一期后来可能又补了几注（合并进同一条），
+   那条已经是 checked 了，只处理 pending 的话新补的注永远不会被算进去。
+   另外查开奖数据要**先查当前 DATA，再查本地历史库** —— 本地库是累积的，
+   比滚动快照全：万一一期滚出了 200 期窗口，档案里那条也还结算得了。 */
+function findDraw(k, code){
+  const r = (DATA[k]||[]).filter(function(x){ return x.code===String(code); })[0];
+  if(r) return r;
+  const o = archInit();
+  const line = o.draws[k] && o.draws[k][String(code)];
+  if(!line) return null;
+  try{ return parseRaw(line)[0] || null; }catch(e){ return null; }
+}
+function settleLedger(){
+  const o = archInit(); let done = 0;
+  o.ledger.forEach(function(e){
+    const draw = findDraw(e.game, e.code);
+    if(!draw) return;                              // 还没开奖 → 保持待开奖
+    let win=0; const detail=[];
+    (e.tickets||[]).forEach(function(t){
+      const j = judgeTicket(t.nums, t.extra, draw, GAMES[e.game]);
+      if(j.level){ win += (j.amt||0); detail.push({r:j.r, e:j.e, level:j.level, amt:j.amt||0, float:!!j.float}); }
+    });
+    const changed = (e.status!=='checked') || (e.win!==win) || (e.drawDate!==draw.date);
+    e.status='checked'; e.win=win; e.detail=detail; e.drawDate=draw.date;
+    if(changed){ e.settledAt=new Date().toISOString(); done++; }
+  });
+  if(done) archSave(o);
+  return done;
+}
+/* 一注的身份 = 号码 + 特别号。去重全靠它。 */
+function tKey(t){ return (t.nums||[]).join(',')+'|'+(t.extra||[]).join(','); }
+/* 记一笔。同一彩种同一期合进同一行（不管那条是不是已经结算过了），合并完重算一次，
+   否则同一期会出现两行，总账看着像买了两次。
+   注单本身也要去重：同一个按钮点两下、同一批注单核验两遍，就会把 3 注记成 6 注，
+   总投入直接翻倍、盈亏全错。工具自己出的 5 注之间不重号，所以去重不会误伤真注单。
+   返回值是**实际新增**的注数（全是重复就返回 0），调用方据此给提示，不许谎报。 */
+function ledgerAdd(game, code, tickets){
+  if(!LS || !tickets || !tickets.length) return 0;
+  const g = GAMES[game];
+  const o = archInit();
+  const ex = o.ledger.filter(function(e){ return e.game===game && e.code===code; })[0];
+  const seen = {};
+  if(ex) ex.tickets.forEach(function(t){ seen[tKey(t)] = 1; });   // 这条里已有的
+  const add = tickets.filter(function(t){
+    const k = tKey(t);
+    if(seen[k]) return false;                                     // 本批内部重复的也一并滤掉
+    seen[k] = 1; return true;
+  });
+  if(!add.length) return 0;
+  if(ex){
+    ex.tickets = ex.tickets.concat(add);
+    ex.n = ex.tickets.length; ex.cost = ex.n * g.price;
+  }else{
+    o.seq = (o.seq||0) + 1;
+    o.ledger.push({id:game+'-'+code+'-'+o.seq, at:new Date().toISOString(), game:game, code:code,
+      tickets:add, n:add.length, cost:add.length*g.price, win:0,
+      status:'pending', detail:[]});
+  }
+  o.ledger.sort(function(a,b){ return b.code>a.code ? 1 : b.code<a.code ? -1 : 0; });
+  archSave(o);
+  settleLedger();
+  return add.length;
+}
+function ledgerAddFromVerify(v){
+  if(!v || !v.rows.length) return 0;
+  const byCode = {};
+  v.rows.forEach(function(x){ (byCode[x.code] = byCode[x.code] || []).push({nums:x.nums, extra:x.extra}); });
+  let n = 0;
+  Object.keys(byCode).forEach(function(code){ n += ledgerAdd(v.game, code, byCode[code]); });
+  return n;
+}
+
+/* ---------- 导出 ---------- */
+function archiveJSON(){
+  const o = archInit();
+  return JSON.stringify({app:'许愿算法', v:'1.1.0', exportedAt:new Date().toISOString(),
+    note:'draws = 开奖历史库（期号 → 原始数据行）；ledger = 下注总账', draws:o.draws, ledger:o.ledger});
+}
+function ledgerCSV(){
+  const o = archInit();
+  const q = function(s){ return '"' + String(s==null?'':s).replace(/"/g,'""') + '"'; };
+  const lines = ['期号,彩种,开奖日,注数,投入(元),中奖(元),盈亏(元),状态,明细'];
+  o.ledger.forEach(function(e){
+    const done = e.status !== 'pending';
+    const net = done ? ((e.win||0)-(e.cost||0)) : '';
+    const det = (e.detail||[]).map(function(d){
+      return LEVEL_CN[d.level] + (d.amt ? (' '+d.amt+'元') : ' 金额待查');
+    }).join(' / ');
+    lines.push([e.code, GAMES[e.game].name, e.drawDate||'', e.n, (e.cost||0),
+      done ? (e.win||0) : '', net, done ? '已结算' : '待开奖', q(det)].join(','));
+  });
+  return '\ufeff' + lines.join('\r\n');   // BOM：不然 Excel 打开中文是乱码
+}
+function downloadText(name, text, mime){
+  try{
+    const b = new Blob([text], {type:(mime||'text/plain')+';charset=utf-8'});
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = u; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{ URL.revokeObjectURL(u); a.remove(); }catch(e){} }, 2000);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ---------- 渲染：最新一期开奖 ---------- */
+function renderDrawBar(){
+  const box = $('#drawBar'); if(!box) return;
+  const card = function(k){
+    const g = GAMES[k], rows = DATA[k];
+    if(!rows || !rows.length)
+      return '<div class="drawcard"><div class="dh"><b>'+g.name+'</b></div><div class="note">开奖数据未载入</div></div>';
+    const r = rows[0];
+    const liveTag = LIVE_INFO[k] ? '<span class="chip ok" style="margin-left:auto">实时</span>' : '';
+    return '<div class="drawcard">'
+      +'<div class="dh"><b>'+g.name+' · 最新一期</b><span>第 '+r.code+' 期 · '+r.date+'</span>'+liveTag+'</div>'
+      +'<div class="balls">'
+      +r.reds.map(function(x){ return '<span class="ball red sm">'+p2(x)+'</span>'; }).join('')
+      +'<span class="plus">+</span>'
+      +r.extra.map(function(x){ return '<span class="ball blue sm">'+p2(x)+'</span>'; }).join('')
+      +'</div></div>';
+  };
+  box.innerHTML = card('ssq') + card('dlt');
+}
+
+/* ---------- 渲染：核验结果 ---------- */
+function renderVerify(v){
+  const box = $('#vOut'); if(!box) return;
+  if(v.err){ box.innerHTML = '<div class="err">'+v.err+'</div>'; return; }
+  if(!v.rows.length && !v.bad.length){
+    box.innerHTML = '<div class="placeholder" style="padding:26px 20px">还没填注单。一行一注粘进去，点「核验这些注单」。</div>';
+    return;
+  }
+  const g = GAMES[v.game];
+  const netCls = v.net>0 ? 'up' : (v.net<0 ? 'down' : '');
+  let h = '';
+  h += '<div class="archsum" style="margin-top:14px">'
+    +'<div class="k"><div class="l">核验注数</div><div class="v">'+v.n+'</div></div>'
+    +'<div class="k"><div class="l">投入(元)</div><div class="v">'+v.cost.toFixed(0)+'</div></div>'
+    +'<div class="k"><div class="l">中奖(元)</div><div class="v">'+v.win.toFixed(0)+'</div></div>'
+    +'<div class="k '+netCls+'"><div class="l">净盈亏(元)</div><div class="v">'+(v.net>0?'+':'')+v.net.toFixed(0)+'</div></div>'
+    +'<div class="k"><div class="l">中奖注数</div><div class="v">'+v.hits+'</div></div>'
+    +'</div>';
+  if(v.floatN)
+    h += '<div class="note" style="margin:-6px 0 12px">其中 '+v.floatN+' 注中了浮动奖，本级单注金额不在库内，'
+      +'中奖合计里按 0 计 —— 别当成没中，去开奖公告补金额。</div>';
+  h += '<div class="toolbar" style="margin-top:12px"><button class="mini" id="vArchBtn" type="button">把本次核验记入档案</button>'
+    +'<span class="note" id="vArchMsg" style="margin:0"></span></div>';
+  v.rows.forEach(function(x, i){
+    const win = !!x.level;
+    h += '<div class="vrow '+(win?'win':'miss')+'">'
+      +'<div class="vh"><span class="no">第 '+(i+1)+' 注</span>'
+      +'<span class="sp">'+g.name+' · 第 '+x.code+' 期 · '+x.date+'</span>'
+      +'<span class="res">'+(win ? (LEVEL_CN[x.level]+' · '+(x.amt ? x.amt.toFixed(0)+' 元' : '金额待查')) : '未中奖')+'</span></div>'
+      +'<div class="balls">'
+      +x.nums.map(function(n){ return '<span class="ball red sm'+(x.draw.reds.indexOf(n)>=0?' hit':'')+'">'+p2(n)+'</span>'; }).join('')
+      +'<span class="plus">+</span>'
+      +x.extra.map(function(n){ return '<span class="ball blue sm'+(x.draw.extra.indexOf(n)>=0?' hit':'')+'">'+p2(n)+'</span>'; }).join('')
+      +'</div>'
+      +'<div class="src">中 '+x.r+' 个区内号 + '+x.e+' 个'+g.extra.label
+      +' ｜ 开奖 '+x.draw.reds.map(p2).join(' ')+' + '+x.draw.extra.map(p2).join(' ')
+      +(x.note ? ' ｜ '+x.note : '')+'</div>'
+      +'</div>';
+  });
+  if(v.bad.length)
+    h += '<div class="vbad"><b>'+v.bad.length+' 行没核验：</b><br>'
+      + v.bad.map(function(b){ return '第 '+b.line+' 行 · '+b.text+' → '+b.why; }).join('<br>') + '</div>';
+  box.innerHTML = h;
+  const ab = $('#vArchBtn');
+  if(ab) ab.onclick = function(){
+    const m = $('#vArchMsg');
+    if(!LS){ if(m) m.textContent = '本地存储不可用，没能记账'; return; }
+    const n = ledgerAddFromVerify(v);
+    if(m) m.textContent = n
+      ? ('已记入档案：'+n+' 注 / 投入 '+(n*GAMES[v.game].price)+' 元'+(v.win?' / 奖金 '+v.win.toFixed(0)+' 元':''))
+      : '这几注已经在档案里了，没有重复记';   // 点两下的常见结果，别谎报成"已记入"
+    if(n) renderArchive();
+  };
+}
+
+/* ---------- 渲染：档案 ---------- */
+function renderArchive(){
+  const box = $('#archBody'); if(!box) return;
+  if(!LS){
+    box.innerHTML = '<div class="err">当前环境不允许本页使用本地存储（file:// 直开或隐私模式常见），档案功能不可用。'
+      +'双击「启动许愿算法.cmd」用本地服务打开，或直接用线上地址。</div>';
+    return;
+  }
+  const o = archInit();
+  const t = ledgerTotals(o.ledger);
+  const cs = archCodes('ssq'), cd = archCodes('dlt');
+  let h = '';
+  h += '<div class="archsum">'
+    +'<div class="k"><div class="l">总投入(元)</div><div class="v">'+t.cost.toFixed(0)+'</div></div>'
+    +'<div class="k"><div class="l">总奖金(元)</div><div class="v">'+t.win.toFixed(0)+'</div></div>'
+    +'<div class="k '+(t.net>0?'up':(t.net<0?'down':''))+'"><div class="l">净盈亏(元)</div><div class="v">'+(t.net>0?'+':'')+t.net.toFixed(0)+'</div></div>'
+    +'<div class="k '+(t.rate>=0?'up':'down')+'"><div class="l">回报率</div><div class="v">'+(t.rate>0?'+':'')+t.rate.toFixed(1)+'%</div></div>'
+    +'<div class="k"><div class="l">记录期数</div><div class="v">'+t.rows+'</div></div>'
+    +'<div class="k"><div class="l">待开奖</div><div class="v">'+t.pending+'</div></div>'
+    +'<div class="k '+(t.streak>=3?'down':'')+'"><div class="l">连续未中</div><div class="v">'+t.streak+'</div></div>'
+    +'</div>';
+
+  h += '<div class="dataage">'
+    +'<span class="chip info">开奖历史库 · 双色球 '+cs.length+' 期'+(cs.length?('（'+cs[0]+' → '+cs[cs.length-1]+'）'):'')+'</span>'
+    +'<span class="chip info">大乐透 '+cd.length+' 期'+(cd.length?('（'+cd[0]+' → '+cd[cd.length-1]+'）'):'')+'</span>'
+    +((o.lastSync && (o.lastSync.ssq||o.lastSync.dlt))
+        ? '<span class="chip ok">最近一次入库 新增 '+o.lastSync.ssq+' + '+o.lastSync.dlt+' 期</span>' : '')
+    +'<span class="chip ok">每次打开自动入库 · 只增不减</span>'
+    +(o.drawsAt ? '<span class="chip">上次入库 '+o.drawsAt.slice(0,10)+'</span>' : '')
+    +'</div>';
+
+  if(!o.ledger.length){
+    h += '<div class="placeholder" style="padding:30px 20px">还没有总账记录。<br>'
+      +'生成 5 注后点出号区的「已出票 · 记入档案」，或在上面核验台核验完点「记入档案」。</div>';
+  }else{
+    // 先把每条的展示字段算好，表格和卡片共用一份，免得两处逻辑漂移
+    const rows = o.ledger.map(function(e){
+      const done = e.status !== 'pending';
+      const net = done ? ((e.win||0)-(e.cost||0)) : null;
+      const det = (e.detail && e.detail.length)
+        ? e.detail.map(function(d){ return LEVEL_CN[d.level] + (d.amt ? ' '+d.amt+'元' : ' 待查'); }).join('、')
+        : '—';
+      return {e:e, done:done, net:net, det:det};
+    });
+    const netCls = function(n){ return n===null ? '' : (n>0 ? 'pos' : (n<0 ? 'neg' : '')); };
+    const badgeOf = function(done){ return done ? '<span class="badge b-done">已结算</span>' : '<span class="badge b-pend">待开奖</span>'; };
+
+    h += '<div class="ledwrap"><table class="led"><thead><tr>'
+      +'<th>期号</th><th>彩种</th><th>开奖日</th><th>注数</th><th>投入</th><th>中奖</th><th>盈亏</th><th>状态</th><th>明细</th>'
+      +'</tr></thead><tbody>';
+    rows.forEach(function(r){
+      const e = r.e;
+      h += '<tr>'
+        +'<td class="mono">'+e.code+'</td>'
+        +'<td>'+GAMES[e.game].name+'</td>'
+        +'<td class="mono">'+(e.drawDate||'—')+'</td>'
+        +'<td class="n">'+e.n+'</td>'
+        +'<td class="n">'+(e.cost||0).toFixed(0)+'</td>'
+        +'<td class="n">'+(r.done ? (e.win||0).toFixed(0) : '—')+'</td>'
+        +'<td class="n '+netCls(r.net)+'">'+(r.net===null ? '—' : ((r.net>0?'+':'')+r.net.toFixed(0)))+'</td>'
+        +'<td>'+badgeOf(r.done)+'</td>'
+        +'<td>'+r.det+'</td></tr>';
+    });
+    h += '</tbody></table></div>';
+
+    h += '<div class="ledcards">';
+    rows.forEach(function(r){
+      const e = r.e;
+      h += '<div class="lcard'+(r.net!==null && r.net>0 ? ' win' : '')+'">'
+        +'<div class="lh"><b>第 '+e.code+' 期</b><span>'+GAMES[e.game].name+' · '+(e.drawDate||'开奖日待定')+'</span>'
+        +badgeOf(r.done)+'</div>'
+        +'<div class="lnums">'
+        +'<span><i>注数</i>'+e.n+'</span>'
+        +'<span><i>投入</i>'+(e.cost||0).toFixed(0)+' 元</span>'
+        +'<span><i>中奖</i>'+(r.done ? (e.win||0).toFixed(0)+' 元' : '—')+'</span>'
+        +'<span class="'+netCls(r.net)+'"><i>盈亏</i>'
+        +(r.net===null ? '—' : ((r.net>0?'+':'')+r.net.toFixed(0)+' 元'))+'</span>'
+        +'</div>'
+        +(r.det !== '—' ? '<div class="ldet">'+r.det+'</div>' : '')
+        +'</div>';
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="toolbar">'
+    +'<button class="mini" id="archExJson" type="button">导出档案 JSON</button>'
+    +'<button class="mini" id="archExCsv" type="button">导出总账 CSV</button>'
+    +'<button class="mini" id="archCopy" type="button">复制档案 JSON</button>'
+    +'<button class="mini" id="archWipe" type="button">清空档案</button>'
+    +'<span class="note" id="archMsg" style="margin:0"></span>'
+    +'</div>';
+  h += '<p class="note">总账只记你确认过的票。奖金按开奖公告的固定奖金额结算；浮动奖的二等奖金额没有入库，'
+    +'明细里会写「待查」，需要你自己按公告补上看真实回报率。开奖历史库每次打开自动同步，去重靠期号，不会重复计数。</p>';
+  box.innerHTML = h;
+
+  const msg = function(s){ const m=$('#archMsg'); if(m) m.textContent = s; };
+  const stamp = function(){ return new Date().toISOString().slice(0,10); };
+  const bind = function(id, fn){ const b=$('#'+id); if(b) b.onclick = fn; };
+  bind('archExJson', function(){
+    msg(downloadText('许愿算法-档案-'+stamp()+'.json', archiveJSON(), 'application/json')
+      ? '已导出 JSON（含开奖历史库与总账）' : '这个浏览器不允许直接下载，试试「复制档案 JSON」');
+  });
+  bind('archExCsv', function(){
+    msg(downloadText('许愿算法-总账-'+stamp()+'.csv', ledgerCSV(), 'text/csv')
+      ? '已导出 CSV（Excel 可直接打开）' : '这个浏览器不允许直接下载，试试「复制档案 JSON」');
+  });
+  bind('archCopy', function(){
+    copyText(archiveJSON(), function(ok){ msg(ok ? '档案 JSON 已复制到剪贴板' : '复制被浏览器拦截，请手动选中'); });
+  });
+  bind('archWipe', function(){
+    if(!o.ledger.length && !cs.length && !cd.length){ msg('档案本来就是空的'); return; }
+    const ask = (typeof confirm==='function')
+      ? confirm('清空本机档案？\n\n会删掉：总账 '+o.ledger.length+' 条、开奖历史库 '+(cs.length+cd.length)+' 期。\n这个操作不可撤销。')
+      : true;
+    if(!ask){ msg('已取消'); return; }
+    try{ LS.removeItem(ARCH_KEY); }catch(e){}
+    syncDraws();
+    settleLedger();
+    renderArchive();
+  });
+}
+
 /* =========================================================
    状态
    ========================================================= */
@@ -966,7 +1596,11 @@ function generate(){
   renderOut(tickets,g,seedStr,LUCK);
   renderBase(tickets.length,g,get('budget'),get('spent'),get('loss'));
   lsSetMany({mine:get('mine'), e2:get('e2'), e3:get('e3'), e4:get('e4'), emod:get('emod'),
-             budget:get('budget'), spent:get('spent'), loss:get('loss'), lweight:get('lweight')});
+             budget:get('budget'), spent:get('spent'), loss:get('loss'), lweight:get('lweight'),
+             // 留一份最近生成的注单，核验台的「带入最近生成的注单」靠它 ——
+             // 省得用户从投注站回来还要手抄一遍号码
+             last:JSON.stringify({game:g.key, code:r.targetCode,
+               tickets:tickets.map(function(t){ return {nums:t.nums, extra:t.extra}; })})});
 }
 
 /* ---------- 渲染流水线 ---------- */
@@ -1016,6 +1650,7 @@ function renderOut(tickets,g,seedStr,LUCK){
   let h='';
   h+='<div class="toolbar">'
     +'<button class="mini" id="copyBtn" type="button">复制这 '+tickets.length+' 注</button>'
+    +'<button class="mini" id="archAddBtn" type="button">已出票 · 记入档案</button>'
     +'<span class="note" id="copyMsg" style="margin:0"></span>'
     +'</div>';
   h+='<div class="dataage" style="margin-bottom:12px"><span class="chip info">'+ecTxt+'</span></div>';
@@ -1048,6 +1683,21 @@ function renderOut(tickets,g,seedStr,LUCK){
     h+='</div>';
   });
   $('#out').innerHTML=h;
+  // 「已出票」要人点一下才算数：工具不知道你到底买没买，自己记一笔等于虚账。
+  const ab=$('#archAddBtn');
+  if(ab) ab.onclick=function(){
+    const m=$('#copyMsg');
+    const code=RES?RES.targetCode:'';
+    if(!code){ if(m) m.textContent='拿不到目标期号，没法记账'; return; }
+    if(!LS){ if(m) m.textContent='本地存储不可用，没能记账'; return; }
+    const n=ledgerAdd(g.key, code, tickets.map(function(t){ return {nums:t.nums, extra:t.extra}; }));
+    if(m) m.textContent=n
+      ? ('已记入档案：'+g.name+' 第 '+code+' 期 '+n+' 注 / '+(n*g.price)+' 元，开奖后自动结算')
+      : '这几注已经在档案里了，没有重复记';
+    renderArchive();
+    if(n){ ab.className='mini ok'; ab.textContent='已记入档案 ✓';
+      setTimeout(function(){ ab.className='mini'; ab.textContent='已出票 · 记入档案'; }, 2200); }
+  };
   const cb=$('#copyBtn');
   if(cb) cb.onclick=function(){
     const old='复制这 '+tickets.length+' 注';
@@ -1169,6 +1819,42 @@ $('#syncData').onclick=async function(){
   }
 };
 
+/* ---------- 核验台事件 ---------- */
+let VGAME = GAMES.ssq;
+function switchVGame(k){
+  VGAME = GAMES[k] || GAMES.ssq;
+  $$('#vGameSeg button').forEach(function(x){
+    if(x.dataset.g === k) x.classList.add('on'); else x.classList.remove('on');
+  });
+  // 默认期号跟着彩种走，默认就是最新的那一期 —— 绝大多数核验都是对最近一期
+  const c = $('#vCode'), rows = DATA[VGAME.key];
+  if(c && rows && rows.length) c.value = rows[0].code;
+}
+function runVerify(){
+  renderVerify(verifyBatch(VGAME.key, $('#vInput').value, $('#vCode').value));
+}
+$$('#vGameSeg button').forEach(function(b){
+  b.onclick = function(){ switchVGame(b.dataset.g); if(String($('#vInput').value||'').trim()) runVerify(); };
+});
+$('#vRun').onclick = runVerify;
+$('#vClear').onclick = function(){ $('#vInput').value=''; $('#vOut').innerHTML=''; };
+$('#vPull').onclick = function(){
+  const box = $('#vOut');
+  const raw = lsGet('last','');
+  if(!raw){ if(box) box.innerHTML='<div class="err">还没有生成过注单。先在第三步生成 5 注，这里就能一键带过来核验。</div>'; return; }
+  let o = null;
+  try{ o = JSON.parse(raw); }catch(e){}
+  if(!o || !o.tickets || !o.tickets.length){
+    if(box) box.innerHTML='<div class="err">本地存的注单读不出来（可能被清理过）。直接手动粘号码也行。</div>';
+    return; }
+  switchVGame(o.game || 'ssq');
+  if($('#vCode')) $('#vCode').value = o.code || $('#vCode').value;
+  if($('#vInput')) $('#vInput').value = o.tickets.map(function(t){
+    return t.nums.map(p2).join(' ') + ' + ' + t.extra.map(p2).join(' ');
+  }).join('\n');
+  runVerify();
+};
+
 /* ---------- init ---------- */
 $('#pickDate').value=fmtDate(new Date());
 if(IS_HTTP){
@@ -1183,6 +1869,15 @@ if(IS_HTTP){
   renderMobile();
 }
 renderAgeBar();
+
+/* 核验台与档案初次装配。顺序不能反：
+   先入库（syncDraws）→ 再结算（settleLedger，靠库里的开奖数据判奖）→ 最后渲染。
+   实时数据到位后 applyLive 会再走一遍同样的序列。 */
+switchVGame('ssq');
+renderDrawBar();
+syncDraws();
+settleLedger();
+renderArchive();
 </script>
 </body>
 </html>
