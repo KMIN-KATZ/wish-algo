@@ -11,6 +11,9 @@
 .workbuddy/cache/
 .workbuddy/tmp/
 
+# ★凭据★ 本地推送用的 GitHub PAT。仓库是公开的，这份文件绝不能传上去。
+.workbuddy/.git-token
+
 # 之前调试时抓下来的一份 /api/data 响应，没有保留价值
 .workbuddy/api.json
 
